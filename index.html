@@ -1,0 +1,3900 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>COCKPIT MVP - 議事録 & タスク管理</title>
+<script src="https://cdn.jsdelivr.net/gh/gitbrent/PptxGenJS@v3.12.0/dist/pptxgen.bundle.js"></script>
+<style>
+:root {
+    --bg: #0f1419;
+    --panel: #1a2029;
+    --panel-2: #232b36;
+    --border: #2d3744;
+    --text: #d4dae3;
+    --text-dim: #8a94a3;
+    --accent: #4a9eff;
+    --accent-2: #7c5cff;
+    --highlight: #ffeb3b;
+    --success: #4caf50;
+    --warning: #ff9800;
+    --danger: #f44336;
+    --indent-size: 4;
+    --editor-font-size: 13px;
+}
+* { box-sizing: border-box; }
+html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: "Yu Gothic UI", "Meiryo UI", "Segoe UI", sans-serif;
+    background: var(--bg); color: var(--text);
+    overflow: hidden; font-size: 13px;
+}
+
+/* ====== トップバー ====== */
+.topbar {
+    height: 40px; background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 16px;
+    user-select: none;
+}
+.topbar .logo {
+    font-weight: 700; font-size: 14px; letter-spacing: 2px;
+    color: var(--accent); margin-right: 24px;
+}
+.topbar .logo span { color: var(--accent-2); }
+
+/* ====== タブ ====== */
+.tabs { display: flex; gap: 2px; }
+.tab-btn {
+    padding: 8px 18px; cursor: pointer; border: none;
+    background: transparent; color: var(--text-dim);
+    font-size: 12px; font-family: inherit;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+}
+.tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.topbar .spacer { flex: 1; }
+.topbar .settings-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-dim); padding: 4px 10px; cursor: pointer;
+    border-radius: 3px; font-family: inherit; font-size: 11px;
+}
+.topbar .settings-btn:hover { color: var(--text); border-color: var(--accent); }
+
+/* ====== コンテンツ領域 ====== */
+.content { height: calc(100vh - 40px); display: none; }
+.content.active { display: flex; }
+
+/* ====== エディタタブ ====== */
+#tab-editor { flex-direction: row; }
+.sidebar {
+    width: 260px; background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    transition: width 0.2s ease;
+    flex-shrink: 0;
+}
+.sidebar.collapsed {
+    width: 36px;
+}
+.sidebar.collapsed .sidebar-body,
+.sidebar.collapsed .sidebar-header h3,
+.sidebar.collapsed .sidebar-header .add-btn {
+    display: none;
+}
+.sidebar.collapsed .sidebar-header {
+    justify-content: center; padding: 10px 0;
+}
+.sidebar-header {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+}
+.sidebar-header h3 { margin: 0; font-size: 11px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; }
+.sidebar-header .add-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+    padding: 2px 7px; border-radius: 3px; cursor: pointer; font-size: 11px;
+}
+.sidebar-header .add-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+.folder-tree { flex: 1; overflow-y: auto; padding: 6px 0; }
+.tree-node { padding: 0; user-select: none; }
+.tree-item {
+    padding: 4px 12px 4px 8px; cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12px;
+}
+.tree-item:hover { background: rgba(255,255,255,0.04); }
+.tree-item.selected { background: rgba(74,158,255,0.15); color: var(--accent); }
+.tree-toggle { width: 12px; color: var(--text-dim); font-size: 10px; }
+.tree-icon { color: var(--text-dim); }
+.tree-children { padding-left: 14px; }
+.tree-item .item-actions {
+    margin-left: auto; display: none; gap: 4px;
+}
+.tree-item:hover .item-actions { display: flex; }
+.item-actions button {
+    background: transparent; border: none; color: var(--text-dim);
+    cursor: pointer; padding: 0 3px; font-size: 11px;
+}
+.item-actions button:hover { color: var(--accent); }
+
+/* タグフィルタ */
+.tag-filter {
+    border-top: 1px solid var(--border); padding: 10px 14px;
+    max-height: 180px; overflow-y: auto;
+}
+.tag-filter h3 { margin: 0 0 8px 0; font-size: 11px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; }
+.tag-chip {
+    display: inline-block; padding: 2px 8px; margin: 2px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 10px; font-size: 11px; cursor: pointer;
+}
+.tag-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* メモ一覧 */
+.memo-list { width: 240px; background: var(--panel-2); border-right: 1px solid var(--border); display: flex; flex-direction: column; transition: width 0.2s ease; flex-shrink: 0; }
+.memo-list.collapsed { width: 36px; }
+.memo-list.collapsed .memo-items,
+.memo-list.collapsed .memo-list-header h3,
+.memo-list.collapsed .memo-list-header .new-btn {
+    display: none;
+}
+.memo-list.collapsed .memo-list-header {
+    justify-content: center; padding: 10px 0;
+}
+.collapse-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+    padding: 2px 6px; cursor: pointer; border-radius: 3px; font-size: 11px;
+    line-height: 1;
+}
+.collapse-btn:hover { color: var(--accent); border-color: var(--accent); }
+.memo-list-header { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;}
+.memo-list-header h3 { margin: 0; font-size: 11px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; }
+.memo-list-header button {
+    background: var(--accent); color: #fff; border: none;
+    padding: 4px 10px; border-radius: 3px; cursor: pointer; font-size: 11px;
+}
+.memo-items { flex: 1; overflow-y: auto; }
+.memo-item {
+    padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--border);
+}
+.memo-item:hover { background: rgba(255,255,255,0.03); }
+.memo-item.selected { background: rgba(74,158,255,0.1); border-left: 3px solid var(--accent); padding-left: 11px; }
+.memo-item .title { font-size: 12px; font-weight: 600; margin-bottom: 3px; }
+.memo-item .meta { font-size: 10px; color: var(--text-dim); }
+.memo-item .tags { margin-top: 4px; }
+.memo-item .tag-mini {
+    display: inline-block; font-size: 9px; padding: 1px 5px;
+    background: var(--panel); border-radius: 8px; margin-right: 3px;
+}
+
+/* エディタ本体 */
+.editor-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.editor-meta {
+    padding: 8px 14px; border-bottom: 1px solid var(--border); background: var(--panel);
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.editor-meta input[type="text"] {
+    background: transparent; border: none; color: var(--text);
+    font-size: 14px; font-weight: 600; outline: none; flex: 1; min-width: 200px;
+    font-family: inherit;
+}
+.editor-meta input[type="text"]:focus { border-bottom: 1px solid var(--accent); }
+.editor-meta .tag-input-wrap {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    background: var(--panel-2); padding: 3px 6px; border-radius: 3px;
+    min-width: 200px;
+}
+.editor-meta .tag-input-wrap .tag-mini {
+    background: var(--accent); color: #fff; padding: 1px 6px;
+    border-radius: 8px; font-size: 10px; cursor: pointer;
+}
+.editor-meta .tag-input-wrap input {
+    background: transparent; border: none; color: var(--text);
+    outline: none; font-size: 11px; flex: 1; min-width: 80px; font-family: inherit;
+}
+
+.toolbar {
+    padding: 6px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
+}
+.tool-btn {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    padding: 4px 10px; cursor: pointer; border-radius: 3px;
+    font-size: 11px; font-family: inherit;
+}
+.tool-btn:hover { background: var(--border); border-color: var(--accent); }
+.tool-btn.recording { background: var(--danger); color: #fff; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1;} 50% { opacity: 0.6; } }
+.tool-divider { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+#editor {
+    flex: 1; padding: 24px 36px; overflow-y: auto;
+    background: var(--bg); color: var(--text);
+    outline: none; line-height: 1.7; font-size: var(--editor-font-size);
+    font-family: "Yu Gothic UI", "Meiryo UI", "Consolas", monospace;
+}
+#editor:empty:before {
+    content: attr(data-placeholder);
+    color: var(--text-dim);
+}
+#editor div { min-height: 1.7em; }
+#editor b, #editor strong { font-weight: 700; color: #fff; }
+#editor i, #editor em { font-style: italic; }
+#editor .marker { background: var(--highlight); color: #000; padding: 0 2px; border-radius: 2px; }
+#editor a { color: var(--accent); text-decoration: underline; }
+#editor h1 { font-size: 22px; border-bottom: 2px solid var(--border); padding-bottom: 4px; margin: 16px 0 8px; }
+#editor h2 { font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 3px; margin: 14px 0 6px; }
+#editor h3 { font-size: 15px; margin: 12px 0 5px; color: var(--accent); }
+#editor table { border-collapse: collapse; margin: 8px 0; }
+#editor th, #editor td {
+    border: 1px solid var(--border); padding: 5px 10px; min-width: 60px;
+}
+#editor th { background: var(--panel); }
+#editor img { max-width: 100%; border: 1px solid var(--border); margin: 4px 0; }
+#editor .memo-audio {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin: 6px 0; padding: 6px 10px;
+    background: var(--panel-2);
+    border-left: 3px solid var(--accent);
+    border-radius: 3px;
+    font-size: 12px;
+    user-select: none;
+}
+#editor .memo-audio-icon { font-size: 14px; }
+#editor .memo-audio-link {
+    color: var(--accent); text-decoration: underline; cursor: pointer;
+}
+#editor .memo-audio-link:hover { color: #fff; }
+#editor .memo-audio-meta { color: var(--text-dim); font-size: 11px; }
+#editor ul, #editor ol { padding-left: calc(var(--indent-size) * 0.6em); }
+#editor code { background: var(--panel); padding: 1px 5px; border-radius: 3px; font-family: Consolas, monospace; }
+
+/* ====== タスク一覧タブ ====== */
+#tab-tasks { flex-direction: column; }
+.tasks-header {
+    padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+}
+.tasks-header h2 { margin: 0; font-size: 16px; letter-spacing: 1px; }
+.tasks-header .stats { display: flex; gap: 16px; font-size: 11px; color: var(--text-dim); }
+.tasks-header .stats span b { color: var(--text); }
+
+.tasks-table-wrap { flex: 1; overflow: auto; padding: 0 20px 20px; }
+.tasks-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+.tasks-table thead th {
+    background: var(--panel); padding: 8px; text-align: left;
+    font-size: 11px; font-weight: 600; color: var(--text-dim);
+    border-bottom: 2px solid var(--border); position: sticky; top: 0;
+    text-transform: uppercase; letter-spacing: 1px;
+}
+.tasks-table tbody td {
+    padding: 8px; border-bottom: 1px solid var(--border); font-size: 12px;
+}
+.tasks-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+.tasks-table input, .tasks-table select {
+    background: transparent; border: 1px solid transparent; color: var(--text);
+    padding: 3px 6px; border-radius: 3px; font-family: inherit; font-size: 12px;
+    width: 100%;
+}
+.tasks-table input:focus, .tasks-table select:focus {
+    border-color: var(--accent); background: var(--panel); outline: none;
+}
+.tasks-table input::placeholder { color: var(--text-dim); font-style: italic; }
+.tasks-table select option { background: var(--panel); color: var(--text); }
+.status-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 600;
+}
+.status-未着手 { background: var(--text-dim); color: #000; }
+.status-進行中 { background: var(--accent); color: #fff; }
+.status-完了 { background: var(--success); color: #fff; }
+.status-保留 { background: var(--warning); color: #000; }
+
+.btn-delete {
+    background: transparent; border: none; color: var(--danger);
+    cursor: pointer; padding: 2px 6px; font-size: 14px;
+}
+.btn-delete:hover { background: rgba(244,67,54,0.2); }
+
+/* ====== WBSタブ（旧・統合タブで再利用） ====== */
+.wbs-node {
+    padding: 0 8px;
+    height: 32px;
+    margin: 0;
+    background: var(--panel); border-left: 3px solid var(--accent);
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    display: flex; align-items: center; gap: 6px;
+    cursor: move; box-sizing: border-box;
+    padding-left: calc(8px + var(--depth, 0) * 18px);
+}
+.wbs-node.parent { border-left-color: var(--accent-2); background: var(--panel-2); }
+.wbs-node.selected { background: rgba(74,158,255,0.18); }
+.wbs-node .toggle {
+    width: 14px; cursor: pointer; color: var(--text-dim); font-size: 10px;
+}
+.wbs-node .title { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wbs-node .meta-info { font-size: 10px; color: var(--text-dim); margin-right: 6px; white-space: nowrap; }
+.wbs-node .controls { display: none; gap: 3px; }
+.wbs-node:hover .controls { display: flex; }
+.wbs-node .controls button {
+    background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+    padding: 1px 5px; cursor: pointer; border-radius: 2px; font-size: 10px;
+}
+.wbs-node .controls button:hover { color: var(--accent); border-color: var(--accent); }
+.wbs-node.dragging { opacity: 0.4; }
+.wbs-node.drag-over { border-top: 2px solid var(--accent); }
+
+/* ====== WBS & ガント統合タブ ====== */
+#tab-wbsgantt { flex-direction: column; }
+.wbsgantt-header {
+    padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+}
+.wbsgantt-content { flex: 1; display: flex; overflow: hidden; }
+.wbs-pane {
+    width: 38%; min-width: 280px; max-width: 70%;
+    display: flex; flex-direction: column;
+    background: var(--bg); overflow: hidden;
+}
+.gantt-pane {
+    flex: 1; display: flex; flex-direction: column;
+    background: var(--panel); overflow: hidden;
+    min-width: 0;
+}
+.wbs-tree-header {
+    height: 36px; line-height: 36px;
+    padding: 0 14px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--text-dim); font-weight: 600;
+    flex-shrink: 0;
+}
+.wbs-tree-wrap { flex: 1; overflow: auto; padding: 0; }
+.splitter {
+    width: 4px; background: var(--border); cursor: col-resize;
+    transition: background 0.15s; flex-shrink: 0;
+}
+.splitter:hover, .splitter.dragging { background: var(--accent); }
+.gantt-scale-btns { display: flex; gap: 4px; }
+.gantt-scale-btn {
+    padding: 5px 14px; background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); cursor: pointer; border-radius: 3px;
+    font-size: 11px; font-family: inherit;
+}
+.gantt-scale-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.gantt-container {
+    flex: 1; overflow: auto; padding: 0;
+    background: var(--bg);
+}
+.gantt-grid {
+    display: grid; grid-template-columns: 280px 1fr;
+    min-width: 100%; min-height: 100%;
+}
+.gantt-tasks-col { border-right: 1px solid var(--border); background: var(--panel); }
+.gantt-task-header {
+    padding: 8px 10px; background: var(--panel-2); border-bottom: 1px solid var(--border);
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim);
+    height: 36px; display: flex; align-items: center;
+}
+.gantt-task-row {
+    padding: 6px 10px; height: 32px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 6px; font-size: 12px;
+}
+.gantt-task-row.parent { background: var(--panel-2); font-weight: 600; }
+
+.gantt-timeline-col { position: relative; overflow-x: auto; background: var(--panel); }
+.gantt-timeline-header {
+    height: 36px; border-bottom: 1px solid var(--border);
+    display: flex; background: var(--panel-2); position: relative;
+}
+.gantt-time-cell {
+    border-right: 1px solid var(--border); text-align: center;
+    font-size: 10px; color: var(--text-dim);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.gantt-time-cell.weekend { background: rgba(244,67,54,0.05); }
+.gantt-time-cell.today { background: rgba(74,158,255,0.15); color: var(--accent); font-weight: bold; }
+
+.gantt-rows-area { position: relative; }
+.gantt-row {
+    height: 32px; border-bottom: 1px solid var(--border); position: relative;
+}
+.gantt-row.parent { background: var(--panel-2); }
+.gantt-bar {
+    position: absolute; top: 6px; height: 20px;
+    background: linear-gradient(180deg, var(--accent), #2d7dd8);
+    border-radius: 3px; cursor: pointer;
+    display: flex; align-items: center; padding: 0 6px;
+    font-size: 10px; color: #fff; white-space: nowrap; overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+.gantt-bar.parent {
+    background: linear-gradient(180deg, var(--accent-2), #5b3fc2);
+    height: 12px; top: 10px; border-radius: 2px;
+}
+.gantt-bar.completed {
+    background: linear-gradient(180deg, var(--success), #388e3c);
+}
+.gantt-bar:hover { box-shadow: 0 0 8px var(--accent); z-index: 5; }
+
+.gantt-grid-line {
+    position: absolute; top: 36px; bottom: 0; width: 1px;
+    background: var(--border);
+}
+.gantt-grid-line.weekend { background: rgba(244,67,54,0.05); width: var(--day-width); }
+.gantt-grid-line.today { background: rgba(74,158,255,0.3); width: 2px; z-index: 2; }
+
+/* ====== タスク追加ポップアップ ====== */
+.popup-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6); display: none;
+    z-index: 999; align-items: center; justify-content: center;
+}
+.popup-overlay.active { display: flex; }
+.popup {
+    width: 400px; background: var(--panel);
+    border: 1px solid var(--accent); border-radius: 6px;
+    padding: 18px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+.popup h3 { margin: 0 0 14px 0; font-size: 14px; color: var(--accent); }
+.popup .form-row { margin-bottom: 10px; }
+.popup label { display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+.popup input, .popup select, .popup textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 10px; border-radius: 3px; font-family: inherit; font-size: 12px;
+}
+.popup input:focus, .popup select:focus, .popup textarea:focus { border-color: var(--accent); outline: none; }
+.popup textarea { resize: vertical; min-height: 50px; }
+.popup .actions {
+    display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px;
+}
+.popup .btn-primary {
+    background: var(--accent); color: #fff; border: none;
+    padding: 6px 18px; border-radius: 3px; cursor: pointer; font-family: inherit; font-size: 12px;
+}
+.popup .btn-secondary {
+    background: transparent; color: var(--text); border: 1px solid var(--border);
+    padding: 6px 18px; border-radius: 3px; cursor: pointer; font-family: inherit; font-size: 12px;
+}
+.popup .btn-primary:hover { background: #2d7dd8; }
+.popup .btn-secondary:hover { border-color: var(--text); }
+
+/* ====== 設定モーダル ====== */
+.settings-popup .form-row label.inline { display: inline; margin-right: 10px; }
+
+/* ====== キャプチャ範囲指定オーバーレイ ====== */
+.capture-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.3); cursor: crosshair; z-index: 9998;
+    display: none;
+}
+.capture-overlay.active { display: block; }
+.capture-selection {
+    position: absolute; border: 2px dashed var(--accent);
+    background: rgba(74,158,255,0.1);
+}
+.capture-hint {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--panel); border: 1px solid var(--accent);
+    padding: 8px 18px; border-radius: 4px; z-index: 9999;
+    font-size: 12px; pointer-events: none;
+}
+
+/* ====== トースト通知 ====== */
+.toast-container {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+    background: var(--panel); border-left: 4px solid var(--accent);
+    padding: 10px 16px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    font-size: 12px; min-width: 200px;
+    animation: slideIn 0.3s ease;
+}
+.toast.success { border-left-color: var(--success); }
+.toast.error { border-left-color: var(--danger); }
+.toast.warning { border-left-color: var(--warning); }
+@keyframes slideIn { from { opacity: 0; transform: translateX(40px);} to { opacity: 1; transform: translateX(0);} }
+
+/* ====== セル分割（ネスト表） ====== */
+#editor table {
+    position: relative;
+}
+#editor th, #editor td {
+    position: relative;
+}
+#editor table.split-table {
+    width: 100%;
+    height: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+#editor table.split-table td,
+#editor table.split-table th {
+    border: 1px dashed var(--accent);
+    padding: 4px 6px;
+    background: transparent;
+    min-width: 30px;
+    min-height: 22px;
+    vertical-align: top;
+}
+/* 分割テーブルを含むセルはpaddingを除去（境界線をぴったり合わせる） */
+#editor td.split-host, #editor th.split-host {
+    padding: 0 !important;
+    vertical-align: top;
+}
+
+/* ====== 表ツールバー（フローティング） ====== */
+.table-toolbar {
+    position: absolute;
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 4px;
+    display: none;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    flex-wrap: wrap;
+    gap: 2px;
+    max-width: 95vw;
+}
+.table-toolbar.active { display: flex; }
+.table-toolbar button {
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); padding: 3px 7px; cursor: pointer;
+    font-size: 10px; border-radius: 2px; font-family: inherit;
+    white-space: nowrap;
+}
+.table-toolbar button:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.table-toolbar .danger { color: var(--danger); }
+.table-toolbar .danger:hover { background: var(--danger); color: #fff; }
+.table-toolbar .divider { width: 1px; background: var(--border); margin: 0 2px; }
+
+#editor table.active-table { outline: 2px solid var(--accent); outline-offset: 1px; }
+#editor td.active-cell, #editor th.active-cell {
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+/* ====== スクロールバー ====== */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ====== 録音インジケータ ====== */
+.recording-indicator {
+    position: fixed; top: 50px; right: 16px; z-index: 100;
+    background: var(--danger); padding: 6px 12px; border-radius: 16px;
+    color: #fff; font-size: 11px; display: none; align-items: center; gap: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.recording-indicator.active { display: flex; animation: pulse 1.5s infinite; }
+.recording-indicator .dot {
+    width: 8px; height: 8px; background: #fff; border-radius: 50%;
+}
+
+/* ====== 録音リスト ====== */
+.recordings-list {
+    border-top: 1px solid var(--border); padding: 8px 14px;
+    max-height: 130px; overflow-y: auto;
+}
+.recordings-list h3 { margin: 0 0 6px 0; font-size: 11px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; }
+.recording-item {
+    display: flex; align-items: center; gap: 6px; padding: 4px 0;
+    font-size: 11px;
+}
+.recording-item button {
+    background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+    padding: 1px 5px; border-radius: 2px; cursor: pointer; font-size: 10px;
+}
+.recording-item button:hover { color: var(--accent); border-color: var(--accent); }
+
+</style>
+</head>
+<body>
+
+<!-- ============ トップバー ============ -->
+<div class="topbar">
+    <div class="logo">COCK<span>PIT</span></div>
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-editor" onclick="showTab('tab-editor', this)">議事メモ</button>
+        <button class="tab-btn" data-tab="tab-tasks" onclick="showTab('tab-tasks', this)">タスク一覧</button>
+        <button class="tab-btn" data-tab="tab-wbsgantt" onclick="showTab('tab-wbsgantt', this)">WBS</button>
+    </div>
+    <div class="spacer"></div>
+    <span id="save-status" style="font-size:11px;margin-right:10px;"></span>
+    <button class="settings-btn" onclick="manualSave()" title="今すぐ保存 (Ctrl+S)" style="margin-right:6px;">💾 保存</button>
+    <span id="topbar-workfolder" style="font-size:11px;color:var(--text-dim);margin-right:10px;cursor:pointer;" onclick="openSettings()" title="クリックで設定">📂 未設定</span>
+    <button class="settings-btn" onclick="openSettings()">⚙ 設定</button>
+</div>
+
+<!-- ============ 議事メモタブ ============ -->
+<div id="tab-editor" class="content active">
+    <!-- フォルダツリー -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3>📁 フォルダ</h3>
+            <div style="display:flex;gap:4px;">
+                <button class="add-btn" onclick="addFolder()" title="フォルダ追加">+</button>
+                <button class="collapse-btn" onclick="toggleSidebar()" title="折りたたみ" id="sidebar-toggle">«</button>
+            </div>
+        </div>
+        <div class="sidebar-body" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+            <div class="folder-tree" id="folder-tree"></div>
+            <div class="tag-filter">
+                <h3>🏷 タグで絞り込み</h3>
+                <div id="tag-filter-list"></div>
+            </div>
+            <div class="recordings-list">
+                <h3>🎙 録音ファイル</h3>
+                <div id="recordings-list-container">
+                    <div style="color:var(--text-dim); font-size:10px;">録音なし</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- メモ一覧 -->
+    <div class="memo-list" id="memo-list">
+        <div class="memo-list-header">
+            <h3>📝 議事メモ</h3>
+            <div style="display:flex;gap:4px;">
+                <button class="new-btn" onclick="newMemo()" style="background:var(--accent);color:#fff;border:none;padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;">+ 新規</button>
+                <button class="collapse-btn" onclick="toggleMemoList()" title="折りたたみ" id="memo-list-toggle">«</button>
+            </div>
+        </div>
+        <div class="memo-items" id="memo-items"></div>
+    </div>
+
+    <!-- エディタ本体 -->
+    <div class="editor-main">
+        <div class="editor-meta">
+            <input type="text" id="memo-title" placeholder="タイトル..." oninput="onTitleChange()" onblur="onTitleBlur()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+            <div class="tag-input-wrap" id="tag-input-wrap">
+                <input type="text" id="tag-input" placeholder="タグ追加 (Enter)" onkeydown="onTagKeydown(event)">
+            </div>
+        </div>
+        <div class="toolbar">
+            <button class="tool-btn" onclick="execCmd('bold')" title="太字 (Ctrl+B)"><b>B</b></button>
+            <button class="tool-btn" onclick="execCmd('italic')" title="斜体 (Ctrl+I)"><i>I</i></button>
+            <button class="tool-btn" onclick="highlight()" title="蛍光ペン">🖍 蛍光</button>
+            <button class="tool-btn" onclick="insertLink()" title="リンク">🔗 リンク</button>
+            <div class="tool-divider"></div>
+            <button class="tool-btn" onclick="insertHeading(1)">H1</button>
+            <button class="tool-btn" onclick="insertHeading(2)">H2</button>
+            <button class="tool-btn" onclick="insertHeading(3)">H3</button>
+            <button class="tool-btn" onclick="execCmd('insertUnorderedList')">• リスト</button>
+            <button class="tool-btn" onclick="execCmd('insertOrderedList')">1. 番号</button>
+            <div class="tool-divider"></div>
+            <button class="tool-btn" onclick="insertTable()" title="3×3の表を挿入。表内のセルを右クリック/長押しで操作メニュー">📊 表挿入</button>
+            <button class="tool-btn" onclick="insertDate()" title="今日の日付を挿入（書式は設定で変更可）">📅 日付</button>
+            <button class="tool-btn" onclick="insertDateTime()" title="現在日時を挿入">🕒 日時</button>
+            <button class="tool-btn" onclick="startCapture()">📷 キャプチャ</button>
+            <button class="tool-btn" id="btn-record" onclick="toggleRecording()">🎙 録音開始</button>
+            <div class="tool-divider"></div>
+            <button class="tool-btn" onclick="addTaskFromSelection()" title="Ctrl+Shift+T">✓ タスク化</button>
+            <div class="tool-divider"></div>
+            <button class="tool-btn" onclick="exportCurrentMemo()" title="拡張子に応じてtxt/md/html/csv形式で出力">📄 ファイル出力</button>
+        </div>
+        <div id="editor" contenteditable="true"
+             oninput="onEditorInput()"
+             onkeydown="onEditorKeydown(event)"
+             onpaste="onEditorPaste(event)"></div>
+    </div>
+</div>
+
+<!-- ============ タスク一覧タブ ============ -->
+<div id="tab-tasks" class="content">
+    <div class="tasks-header">
+        <h2>📋 タスク一覧</h2>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <div class="stats">
+                <span>総数: <b id="stat-total">0</b></span>
+                <span>未着手: <b id="stat-todo">0</b></span>
+                <span>進行中: <b id="stat-doing">0</b></span>
+                <span>完了: <b id="stat-done">0</b></span>
+            </div>
+            <button class="tool-btn" onclick="exportTasksCSV()">📥 CSVエクスポート</button>
+            <button class="tool-btn" onclick="document.getElementById('csv-import-tasks').click()">📤 CSVインポート</button>
+            <input type="file" id="csv-import-tasks" accept=".csv" style="display:none" onchange="importTasksCSV(event)">
+        </div>
+    </div>
+    <div class="tasks-table-wrap">
+        <table class="tasks-table">
+            <thead>
+                <tr>
+                    <th style="width:26%">内容</th>
+                    <th style="width:18%">親タスク（内訳の場合）</th>
+                    <th style="width:11%">開始日</th>
+                    <th style="width:11%">期日</th>
+                    <th style="width:10%">担当</th>
+                    <th style="width:10%">ステータス</th>
+                    <th style="width:10%">出典メモ</th>
+                    <th style="width:4%"></th>
+                </tr>
+            </thead>
+            <tbody id="tasks-tbody"></tbody>
+        </table>
+        <button class="tool-btn" onclick="addBlankTask()" style="margin-top:10px;">+ TODO追加（その場で入力）</button>
+        <div style="color:var(--text-dim);font-size:11px;margin-top:6px;">
+            ヒント：ここで作ったタスクは「親タスク」列で他タスクの内訳に紐付け可能。<br>
+            「WBS」タブから直接作成・編集することもできます。
+        </div>
+    </div>
+</div>
+
+<!-- ============ WBS & ガントチャート統合タブ ============ -->
+<div id="tab-wbsgantt" class="content">
+    <div class="wbsgantt-header">
+        <h2 style="margin:0;font-size:16px;">🏗 WBS（左：階層） / ガントチャート（右：時系列）</h2>
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+            <button class="tool-btn" onclick="addWBSRoot()">+ WBSタスク追加（その場で入力）</button>
+            <div class="gantt-scale-btns">
+                <button class="gantt-scale-btn" onclick="setGanttScale('d')" data-scale="d">日</button>
+                <button class="gantt-scale-btn active" onclick="setGanttScale('w')" data-scale="w">週</button>
+                <button class="gantt-scale-btn" onclick="setGanttScale('m')" data-scale="m">月</button>
+            </div>
+            <button class="tool-btn" onclick="exportTasksCSV()">📥 CSV</button>
+            <button class="tool-btn" onclick="document.getElementById('csv-import-wbs').click()">📤 CSV読込</button>
+            <input type="file" id="csv-import-wbs" accept=".csv" style="display:none" onchange="importTasksCSV(event)">
+            <button class="tool-btn" onclick="exportToPPTX()">📤 PowerPoint出力</button>
+            <span style="color:var(--text-dim);font-size:11px;">Enter=次の同階層 / Tab=子追加 / Shift+Tab=親階層 / Esc=取消</span>
+        </div>
+    </div>
+    <div class="wbsgantt-content">
+        <div class="wbs-pane" id="wbs-pane">
+            <div class="wbs-tree-header">タスク（WBS）</div>
+            <div class="wbs-tree-wrap" id="wbs-tree"></div>
+        </div>
+        <div class="splitter" id="splitter"></div>
+        <div class="gantt-pane">
+            <div class="gantt-container" id="gantt-container"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ============ タスク追加ポップアップ ============ -->
+<div class="popup-overlay" id="task-popup">
+    <div class="popup">
+        <h3>✓ タスクの追加</h3>
+        <div class="form-row">
+            <label>内容</label>
+            <textarea id="pop-task-title" rows="2"></textarea>
+        </div>
+        <div class="form-row">
+            <label>親タスク（どのタスクの内訳になるか）</label>
+            <select id="pop-task-parent"></select>
+        </div>
+        <div class="form-row" style="display:flex;gap:8px;">
+            <div style="flex:1">
+                <label>開始日</label>
+                <input type="date" id="pop-task-start">
+            </div>
+            <div style="flex:1">
+                <label>期日</label>
+                <input type="date" id="pop-task-date">
+            </div>
+        </div>
+        <div class="form-row" style="display:flex;gap:8px;">
+            <div style="flex:1">
+                <label>担当者</label>
+                <input type="text" id="pop-task-owner">
+            </div>
+            <div style="flex:1">
+                <label>ステータス</label>
+                <select id="pop-task-status">
+                    <option value="未着手">未着手</option>
+                    <option value="進行中">進行中</option>
+                    <option value="完了">完了</option>
+                    <option value="保留">保留</option>
+                </select>
+            </div>
+        </div>
+        <div class="actions">
+            <button class="btn-secondary" onclick="closeTaskPopup()">キャンセル</button>
+            <button class="btn-primary" onclick="saveTaskFromPopup()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ 設定ポップアップ ============ -->
+<div class="popup-overlay" id="settings-popup">
+    <div class="popup settings-popup" style="width:480px;">
+        <h3>⚙ 設定</h3>
+        <div class="form-row">
+            <label>📂 ワークフォルダ（初回設定後はダイアログ不要で直接保存）</label>
+            <div id="workfolder-status" style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:3px;font-size:11px;margin-bottom:6px;"></div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button class="btn-secondary" onclick="selectWorkFolder()">📁 フォルダを選択</button>
+                <button class="btn-secondary" onclick="loadFromWorkFolder()">📥 フォルダから読込</button>
+                <button class="btn-secondary" onclick="importTasksCSVFromWorkFolder()">📥 タスクCSV読込</button>
+                <button class="btn-secondary" onclick="exportAllMemos()">📤 全メモを一括書き出し</button>
+                <button class="btn-secondary" onclick="clearWorkFolder()" style="color:var(--text-dim);">解除</button>
+            </div>
+            <div style="margin-top:8px;">
+                <label class="inline" style="font-size:12px;color:var(--text);text-transform:none;letter-spacing:0;">
+                    <input type="checkbox" id="auto-save-check" onchange="toggleAutoSave(this.checked)" style="vertical-align:middle;width:auto;">
+                    自動保存（変更があれば1.5秒後にCSVとJSONをワークフォルダに自動書き出し）
+                </label>
+            </div>
+            <div style="margin-top:4px;">
+                <label class="inline" style="font-size:12px;color:var(--text);text-transform:none;letter-spacing:0;">
+                    <input type="checkbox" id="auto-save-memos-check" onchange="toggleAutoSaveMemos(this.checked)" style="vertical-align:middle;width:auto;">
+                    自動保存に議事メモも含める（タイトルの拡張子に応じてtxt/md/html/csv化）
+                </label>
+            </div>
+        </div>
+        <div class="form-row">
+            <label>📝 議事メモのファイル名形式</label>
+            <div style="margin-bottom:6px;">
+                <span style="font-size:10px;color:var(--text-dim);">新規メモのデフォルト名：</span>
+                <input type="text" id="setting-memo-name" placeholder="{yyyy}-{mm}-{dd}-{hh}-{nn}.txt">
+            </div>
+            <div>
+                <span style="font-size:10px;color:var(--text-dim);">タイトル入力時の接尾語（既に拡張子があれば付加されません）：</span>
+                <input type="text" id="setting-memo-suffix" placeholder="_{yy}{mm}{dd}.txt">
+            </div>
+            <div style="font-size:10px;color:var(--text-dim);margin-top:6px;line-height:1.6;">
+                利用可能トークン：<br>
+                <code style="background:var(--bg);padding:1px 4px;">{yyyy}</code>4桁年・
+                <code style="background:var(--bg);padding:1px 4px;">{yy}</code>2桁年・
+                <code style="background:var(--bg);padding:1px 4px;">{mm}</code>月・
+                <code style="background:var(--bg);padding:1px 4px;">{dd}</code>日・
+                <code style="background:var(--bg);padding:1px 4px;">{hh}</code>時・
+                <code style="background:var(--bg);padding:1px 4px;">{nn}</code>分・
+                <code style="background:var(--bg);padding:1px 4px;">{ss}</code>秒
+            </div>
+            <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">
+                プレビュー：<span id="memo-name-preview" style="color:var(--accent);"></span> / <span id="memo-suffix-preview" style="color:var(--accent);"></span>
+            </div>
+        </div>
+        <div class="form-row">
+            <label>インデント文字数（デフォルト: 4）</label>
+            <input type="number" id="setting-indent" min="1" max="16" value="4">
+        </div>
+        <div class="form-row">
+            <label>エディタのフォントサイズ（px）</label>
+            <input type="number" id="setting-font-size" min="10" max="32" value="13">
+        </div>
+        <div class="form-row">
+            <label>🎙 録音用マイク</label>
+            <select id="setting-mic-device">
+                <option value="">（デフォルトマイク）</option>
+            </select>
+            <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
+                <button class="btn-secondary" onclick="loadMicDevices()">🔄 マイク一覧を更新</button>
+                <button class="btn-secondary" onclick="testMic()">🎤 マイクテスト（3秒録音→再生）</button>
+            </div>
+            <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">
+                初回はブラウザのマイク許可が必要です。マイク名を表示するには「一覧を更新」を押してください。
+            </div>
+        </div>
+        <div class="form-row">
+            <label>📅 日付挿入の書式</label>
+            <div style="margin-bottom:6px;">
+                <span style="font-size:10px;color:var(--text-dim);">「📅 日付」ボタン用：</span>
+                <input type="text" id="setting-date-format" placeholder="{yyyy}/{mm}/{dd}">
+            </div>
+            <div>
+                <span style="font-size:10px;color:var(--text-dim);">「🕒 日時」ボタン用：</span>
+                <input type="text" id="setting-datetime-format" placeholder="{yyyy}/{mm}/{dd} {hh}:{nn}">
+            </div>
+            <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">
+                プレビュー：<span id="date-preview" style="color:var(--accent);"></span> / <span id="datetime-preview" style="color:var(--accent);"></span>
+            </div>
+        </div>
+        <div class="form-row">
+            <label>データのバックアップ・復元（任意のファイル）</label>
+            <div style="display:flex; gap:6px;">
+                <button class="btn-secondary" onclick="exportAllData()">📥 JSONエクスポート</button>
+                <button class="btn-secondary" onclick="document.getElementById('import-file').click()">📤 JSONインポート</button>
+                <input type="file" id="import-file" accept=".json" style="display:none" onchange="importAllData(event)">
+            </div>
+        </div>
+        <div class="form-row">
+            <label style="color:var(--danger)">データ初期化</label>
+            <button class="btn-secondary" style="border-color:var(--danger); color:var(--danger);" onclick="resetAllData()">🗑 全データを削除</button>
+        </div>
+        <div class="actions">
+            <button class="btn-primary" onclick="saveSettings()">保存して閉じる</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ WBS編集ポップアップ ============ -->
+<div class="popup-overlay" id="wbs-popup">
+    <div class="popup">
+        <h3>✏ WBSノード編集</h3>
+        <div class="form-row">
+            <label>タスク名</label>
+            <input type="text" id="wbs-pop-title">
+        </div>
+        <div class="form-row">
+            <label>親タスク（どのタスクの内訳になるか）</label>
+            <select id="wbs-pop-parent"></select>
+        </div>
+        <div class="form-row" style="display:flex;gap:8px;">
+            <div style="flex:1">
+                <label>開始日</label>
+                <input type="date" id="wbs-pop-start">
+            </div>
+            <div style="flex:1">
+                <label>終了日</label>
+                <input type="date" id="wbs-pop-end">
+            </div>
+        </div>
+        <div class="form-row" style="display:flex;gap:8px;">
+            <div style="flex:1">
+                <label>担当者</label>
+                <input type="text" id="wbs-pop-owner">
+            </div>
+            <div style="flex:1">
+                <label>ステータス</label>
+                <select id="wbs-pop-status">
+                    <option value="未着手">未着手</option>
+                    <option value="進行中">進行中</option>
+                    <option value="完了">完了</option>
+                    <option value="保留">保留</option>
+                </select>
+            </div>
+        </div>
+        <div class="actions">
+            <button class="btn-secondary" onclick="closeWBSPopup()">キャンセル</button>
+            <button class="btn-primary" onclick="saveWBSFromPopup()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ 表ツールバー（フローティング） ============ -->
+<div class="table-toolbar" id="table-toolbar">
+    <button onclick="tableAddRow('above')" title="上に行追加">⬆ +行</button>
+    <button onclick="tableAddRow('below')" title="下に行追加">⬇ +行</button>
+    <button onclick="tableAddCol('left')" title="左に列追加">⬅ +列</button>
+    <button onclick="tableAddCol('right')" title="右に列追加">➡ +列</button>
+    <span class="divider"></span>
+    <button onclick="tableDeleteRow()" class="danger" title="行を削除">−行</button>
+    <button onclick="tableDeleteCol()" class="danger" title="列を削除">−列</button>
+    <span class="divider"></span>
+    <button onclick="tableMergeRight()" title="右セルと結合">↔ 結合右</button>
+    <button onclick="tableMergeDown()" title="下セルと結合">↕ 結合下</button>
+    <span class="divider"></span>
+    <button onclick="tableSplitH()" title="このセルを横にN個に分割">⊞ 横分割</button>
+    <button onclick="tableSplitV()" title="このセルを縦にN個に分割">⊟ 縦分割</button>
+    <button onclick="tableUnmerge()" title="結合・分割を解除">⊠ 解除</button>
+    <span class="divider"></span>
+    <button onclick="tableResetSize()" title="列幅・行高を自動に戻す">↺ サイズ自動</button>
+    <button onclick="tableDelete()" class="danger" title="表全体を削除">🗑 表削除</button>
+</div>
+
+<!-- ============ キャプチャオーバーレイ ============ -->
+<div class="capture-overlay" id="capture-overlay">
+    <div class="capture-selection" id="capture-selection"></div>
+</div>
+<div class="capture-hint" id="capture-hint" style="display:none;">
+    ドラッグで範囲を選択 / ESCでキャンセル
+</div>
+
+<!-- ============ 録音インジケータ ============ -->
+<div class="recording-indicator" id="rec-indicator">
+    <div class="dot"></div>
+    <span>録音中 <span id="rec-timer">00:00</span></span>
+</div>
+
+<!-- ============ トースト ============ -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+/* =========================================================
+   COCKPIT MVP - 全機能実装
+   ローカルストレージで動作 / 単一HTMLファイル
+   ========================================================= */
+
+// ========== グローバル状態 ==========
+const STORE_KEY = 'cockpit_data_v1';
+let state = {
+    folders: [],     // [{id, name, parent, expanded}]
+    memos: [],       // [{id, folderId, title, body, tags:[], created, updated}]
+    tasks: [],       // [{id, title, date, owner, status, memoId, wbsId, parentId, order}]
+    settings: { indent: 4 },
+    selectedFolderId: null,
+    selectedMemoId: null,
+    activeTagFilters: [],
+    currentTaskMemoId: null,
+    editingWbsId: null,
+    ganttScale: 'w',  // d/w/m
+    recordings: [],   // [{id, blobUrl, name, date, duration}]
+};
+let mediaRecorder = null;
+let recordChunks = [];
+let recordStartTime = 0;
+let recordTimerInterval = null;
+let captureStream = null;
+let lastSelectionRange = null;
+
+// ========== 永続化 ==========
+function saveState() {
+    const persisted = {
+        folders: state.folders,
+        memos: state.memos,
+        tasks: state.tasks,
+        settings: state.settings,
+        // recordingsはBlobURLなので簡易には保存しない（メタのみ）
+        recordings: state.recordings.map(r => ({ id:r.id, name:r.name, date:r.date, duration:r.duration }))
+    };
+    try {
+        localStorage.setItem(STORE_KEY, JSON.stringify(persisted));
+    } catch (e) {
+        toast('保存失敗: ' + e.message, 'error');
+    }
+    // ワークフォルダへの自動保存（debounce）
+    scheduleAutoSave();
+}
+function loadState() {
+    try {
+        const raw = localStorage.getItem(STORE_KEY);
+        if (!raw) return seedInitialData();
+        const data = JSON.parse(raw);
+        Object.assign(state, data);
+        if (!state.folders) state.folders = [];
+        if (!state.memos) state.memos = [];
+        if (!state.tasks) state.tasks = [];
+        if (!state.settings) state.settings = { indent: 4 };
+        if (!state.recordings) state.recordings = [];
+    } catch (e) {
+        console.error(e);
+        seedInitialData();
+    }
+}
+function seedInitialData() {
+    const rootId = uid();
+    state.folders = [{ id: rootId, name: '全般', parent: null, expanded: true }];
+    state.memos = [];
+    state.tasks = [];
+    state.selectedFolderId = rootId;
+    saveState();
+}
+// ========== File System Access API（ワークフォルダ） ==========
+// 一度フォルダを選択すれば、以降ダイアログなしで読み書き可能
+const FS_DB_NAME = 'cockpit_fs_handles';
+const FS_DB_STORE = 'handles';
+let workFolderHandle = null;
+let autoSaveEnabled = false;
+let autoSaveTimer = null;
+
+function fsOpenDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(FS_DB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(FS_DB_STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+async function fsSaveHandle(key, handle) {
+    const db = await fsOpenDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(FS_DB_STORE, 'readwrite');
+        tx.objectStore(FS_DB_STORE).put(handle, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+async function fsLoadHandle(key) {
+    try {
+        const db = await fsOpenDB();
+        return new Promise((resolve) => {
+            const tx = db.transaction(FS_DB_STORE, 'readonly');
+            const req = tx.objectStore(FS_DB_STORE).get(key);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+        });
+    } catch { return null; }
+}
+async function fsDeleteHandle(key) {
+    const db = await fsOpenDB();
+    return new Promise((resolve) => {
+        const tx = db.transaction(FS_DB_STORE, 'readwrite');
+        tx.objectStore(FS_DB_STORE).delete(key);
+        tx.oncomplete = () => resolve();
+    });
+}
+async function fsEnsurePermission(handle, mode = 'readwrite') {
+    if (!handle) return false;
+    try {
+        const opts = { mode };
+        let p = await handle.queryPermission(opts);
+        if (p === 'granted') return true;
+        p = await handle.requestPermission(opts);
+        return p === 'granted';
+    } catch { return false; }
+}
+async function selectWorkFolder() {
+    if (!window.showDirectoryPicker) {
+        toast('このブラウザは未対応です（Edge/Chrome推奨）', 'error');
+        return;
+    }
+    try {
+        const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        await fsSaveHandle('workFolder', handle);
+        workFolderHandle = handle;
+        // 既存ファイルの読み込み確認
+        const existing = await readFromWorkFolder('cockpit_data.json');
+        if (existing) {
+            if (confirm('このフォルダにバックアップが見つかりました。読み込みますか？\n（OK=読込 / キャンセル=現データ維持）')) {
+                await loadFromWorkFolder();
+            }
+        }
+        // 自動保存をデフォルトでON（ユーザーがフォルダを設定した≒自動保存したい）
+        autoSaveEnabled = true;
+        updateWorkFolderUI();
+        toast('ワークフォルダ設定: ' + handle.name + '（自動保存ON）', 'success');
+        // 即座に1回保存
+        await autoSaveToWorkFolder();
+    } catch (e) {
+        if (e.name !== 'AbortError') toast('フォルダ選択失敗: ' + e.message, 'error');
+    }
+}
+async function clearWorkFolder() {
+    if (!confirm('ワークフォルダ設定を解除しますか？\n（フォルダ内のファイルは削除されません）')) return;
+    await fsDeleteHandle('workFolder');
+    workFolderHandle = null;
+    autoSaveEnabled = false;
+    updateWorkFolderUI();
+    toast('ワークフォルダ設定を解除しました', 'success');
+}
+async function writeToWorkFolder(filename, content) {
+    if (!workFolderHandle) return false;
+    const ok = await fsEnsurePermission(workFolderHandle, 'readwrite');
+    if (!ok) { toast('フォルダ書込許可が得られませんでした', 'warning'); return false; }
+    try {
+        const fileHandle = await workFolderHandle.getFileHandle(filename, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(content);
+        await writable.close();
+        return true;
+    } catch (e) {
+        toast('書込失敗(' + filename + '): ' + e.message, 'error');
+        return false;
+    }
+}
+async function readFromWorkFolder(filename) {
+    if (!workFolderHandle) return null;
+    const ok = await fsEnsurePermission(workFolderHandle, 'read');
+    if (!ok) return null;
+    try {
+        const fileHandle = await workFolderHandle.getFileHandle(filename);
+        const file = await fileHandle.getFile();
+        return await file.text();
+    } catch {
+        return null; // 存在しない or 失敗
+    }
+}
+function updateWorkFolderUI() {
+    const status = document.getElementById('workfolder-status');
+    if (status) {
+        if (workFolderHandle) {
+            status.innerHTML = `現在の保存先：<b style="color:var(--accent)">📂 ${escapeHtml(workFolderHandle.name)}</b>${autoSaveEnabled ? ' <span style="color:var(--success)">● 自動保存ON</span>' : ''}`;
+        } else {
+            status.innerHTML = '<span style="color:var(--text-dim)">未設定（CSVエクスポートはダウンロードフォルダへ）</span>';
+        }
+    }
+    const autoSaveCheck = document.getElementById('auto-save-check');
+    if (autoSaveCheck) {
+        autoSaveCheck.disabled = !workFolderHandle;
+        autoSaveCheck.checked = autoSaveEnabled && !!workFolderHandle;
+    }
+    const autoSaveMemosCheck = document.getElementById('auto-save-memos-check');
+    if (autoSaveMemosCheck) {
+        autoSaveMemosCheck.disabled = !workFolderHandle;
+        autoSaveMemosCheck.checked = !!state.settings.autoSaveMemos && !!workFolderHandle;
+    }
+    // トップバー表示
+    const topbar = document.getElementById('topbar-workfolder');
+    if (topbar) {
+        if (workFolderHandle) {
+            topbar.innerHTML = `📂 ${escapeHtml(workFolderHandle.name)}${autoSaveEnabled ? ' <span style="color:var(--success)">●</span>' : ''}`;
+            topbar.style.color = 'var(--accent)';
+        } else {
+            topbar.innerHTML = '📂 フォルダ未設定';
+            topbar.style.color = 'var(--text-dim)';
+        }
+    }
+}
+async function loadFromWorkFolder() {
+    const json = await readFromWorkFolder('cockpit_data.json');
+    if (!json) { toast('cockpit_data.json が見つかりません', 'warning'); return; }
+    try {
+        const data = JSON.parse(json);
+        state.folders = data.folders || [];
+        state.memos = data.memos || [];
+        state.tasks = data.tasks || [];
+        state.settings = data.settings || { indent: 4 };
+        if (state.folders.length && !state.folders.find(f => f.id === state.selectedFolderId)) {
+            state.selectedFolderId = state.folders[0].id;
+        }
+        saveState();
+        renderAll();
+        toast('ワークフォルダから読込みました', 'success');
+    } catch (e) { toast('読込失敗: ' + e.message, 'error'); }
+}
+async function autoSaveToWorkFolder() {
+    if (!autoSaveEnabled || !workFolderHandle) return;
+    setSaveStatus('saving');
+    try {
+        const json = JSON.stringify({
+            folders: state.folders,
+            memos: state.memos,
+            tasks: state.tasks,
+            settings: state.settings,
+        }, null, 2);
+        const ok1 = await writeToWorkFolder('cockpit_data.json', json);
+        const ok2 = await writeToWorkFolder('cockpit_tasks.csv', '\ufeff' + buildTasksCSV());
+        let ok3 = true;
+        // 議事メモも個別ファイルとして書き出し
+        if (state.settings.autoSaveMemos) {
+            for (const memo of state.memos) {
+                const filename = sanitizeFilename(memo.title || getDefaultMemoTitle());
+                if (!filename) continue;
+                const { content } = convertMemoBody(memo);
+                const ok = await writeToWorkFolder(filename, content);
+                if (!ok) ok3 = false;
+            }
+        }
+        if (ok1 && ok2 && ok3) setSaveStatus('saved');
+        else setSaveStatus('error');
+    } catch (e) {
+        setSaveStatus('error');
+    }
+}
+function toggleAutoSaveMemos(enabled) {
+    state.settings.autoSaveMemos = !!enabled;
+    saveState();
+    if (enabled) toast('議事メモも自動書き出し対象に', 'success');
+    else toast('議事メモの自動書き出しを停止', 'warning');
+}
+function setSaveStatus(status) {
+    const el = document.getElementById('save-status');
+    if (!el) return;
+    const now = new Date();
+    const t = now.toTimeString().slice(0, 8);
+    if (status === 'saving') {
+        el.innerHTML = '<span style="color:var(--warning)">● 保存中...</span>';
+    } else if (status === 'saved') {
+        el.innerHTML = `<span style="color:var(--success)">✓ ${t} 保存済み</span>`;
+    } else if (status === 'error') {
+        el.innerHTML = '<span style="color:var(--danger)">✗ 保存失敗</span>';
+    } else {
+        el.innerHTML = '';
+    }
+}
+function scheduleAutoSave() {
+    if (!autoSaveEnabled || !workFolderHandle) return;
+    setSaveStatus('saving');
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(autoSaveToWorkFolder, 1500); // 1.5秒debounce
+}
+function buildTasksCSV() {
+    const headers = ['id', 'title', 'parentId', 'parentTitle', 'startDate', 'endDate', 'owner', 'status', 'order', 'memoTitle'];
+    const rows = [headers];
+    const flat = flattenWBS();
+    flat.forEach(it => {
+        const t = it.task;
+        const parent = t.parentId ? state.tasks.find(x => x.id === t.parentId) : null;
+        const memo = t.memoId ? state.memos.find(m => m.id === t.memoId) : null;
+        rows.push([
+            t.id, t.title || '', t.parentId || '',
+            parent ? (parent.title || '') : '',
+            t.startDate || '', t.date || '', t.owner || '', t.status || '',
+            t.order != null ? t.order : '',
+            memo ? (memo.title || '') : ''
+        ]);
+    });
+    return rows.map(r => r.map(csvEscape).join(',')).join('\r\n');
+}
+
+function uid() { return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8); }
+
+// インライン編集中のWBSノードID
+let editingNodeId = null;
+
+// ========== CSV処理 ==========
+function csvEscape(val) {
+    val = (val == null) ? '' : String(val);
+    if (val.includes(',') || val.includes('\n') || val.includes('\r') || val.includes('"')) {
+        return '"' + val.replace(/"/g, '""') + '"';
+    }
+    return val;
+}
+function parseCSV(text) {
+    const rows = [];
+    let cur = [''];
+    let inQuote = false;
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (inQuote) {
+            if (c === '"') {
+                if (text[i + 1] === '"') { cur[cur.length - 1] += '"'; i++; }
+                else { inQuote = false; }
+            } else {
+                cur[cur.length - 1] += c;
+            }
+        } else {
+            if (c === '"') inQuote = true;
+            else if (c === ',') cur.push('');
+            else if (c === '\r') { /* skip */ }
+            else if (c === '\n') {
+                rows.push(cur);
+                cur = [''];
+            }
+            else cur[cur.length - 1] += c;
+        }
+    }
+    if (cur.length > 1 || cur[0]) rows.push(cur);
+    return rows;
+}
+async function exportTasksCSV() {
+    const csv = buildTasksCSV();
+    const flat = flattenWBS();
+    // ワークフォルダ設定済みなら直接保存
+    if (workFolderHandle) {
+        const ok = await writeToWorkFolder('cockpit_tasks.csv', '\ufeff' + csv);
+        if (ok) { toast(`${flat.length}件をワークフォルダに保存しました`, 'success'); return; }
+    }
+    // 従来のダウンロード
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cockpit_tasks_' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast(`${flat.length}件のタスクをCSVエクスポートしました`, 'success');
+}
+async function importTasksCSVFromWorkFolder() {
+    if (!workFolderHandle) {
+        toast('ワークフォルダ未設定', 'warning');
+        return;
+    }
+    const text = await readFromWorkFolder('cockpit_tasks.csv');
+    if (!text) {
+        toast('cockpit_tasks.csv が見つかりません', 'warning');
+        return;
+    }
+    processCSVImport(text);
+}
+function processCSVImport(rawText) {
+    try {
+        let text = rawText.replace(/^\ufeff/, '');
+        const rows = parseCSV(text);
+        if (rows.length < 2) { toast('CSVが空です', 'warning'); return; }
+        const headers = rows[0].map(h => h.trim());
+        const idx = (name) => headers.indexOf(name);
+        const titleIdx = idx('title');
+        if (titleIdx < 0) { toast('title列が見つかりません', 'error'); return; }
+        const idIdx = idx('id');
+        const parentIdIdx = idx('parentId');
+        const startIdx = idx('startDate');
+        const endIdx = idx('endDate') >= 0 ? idx('endDate') : idx('date');
+        const ownerIdx = idx('owner');
+        const statusIdx = idx('status');
+        const orderIdx = idx('order');
+
+        const mode = confirm('OK = 既存タスクを全て置き換える\nキャンセル = 既存タスクに追加する');
+
+        const newTasks = [];
+        for (let i = 1; i < rows.length; i++) {
+            const r = rows[i];
+            if (!r[titleIdx] || !r[titleIdx].trim()) continue;
+            newTasks.push({
+                id: (idIdx >= 0 && r[idIdx]) ? r[idIdx] : uid(),
+                title: r[titleIdx] || '',
+                parentId: (parentIdIdx >= 0 && r[parentIdIdx]) ? r[parentIdIdx] : null,
+                startDate: startIdx >= 0 ? (r[startIdx] || '') : '',
+                date: endIdx >= 0 ? (r[endIdx] || '') : '',
+                owner: ownerIdx >= 0 ? (r[ownerIdx] || '') : '',
+                status: statusIdx >= 0 ? (r[statusIdx] || '未着手') : '未着手',
+                order: (orderIdx >= 0 && r[orderIdx]) ? parseInt(r[orderIdx]) || i : i,
+                memoId: null,
+                wbsId: null
+            });
+        }
+        if (mode) {
+            state.tasks = newTasks;
+        } else {
+            const existingIds = new Set(state.tasks.map(t => t.id));
+            const idMap = {};
+            newTasks.forEach(t => {
+                if (existingIds.has(t.id)) {
+                    const newId = uid();
+                    idMap[t.id] = newId;
+                    t.id = newId;
+                }
+            });
+            newTasks.forEach(t => {
+                if (t.parentId && idMap[t.parentId]) t.parentId = idMap[t.parentId];
+            });
+            state.tasks.push(...newTasks);
+        }
+        saveState();
+        renderTasks();
+        if (document.getElementById('tab-wbsgantt').classList.contains('active')) {
+            renderWBS(); renderGantt();
+        }
+        toast(`${newTasks.length}件をインポートしました`, 'success');
+    } catch (err) {
+        toast('インポート失敗: ' + err.message, 'error');
+    }
+}
+function importTasksCSV(e) {
+    const file = e.target.files[0];
+    if (!file) { return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+        processCSVImport(reader.result);
+        e.target.value = '';
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
+// 親タスク選択肢を生成（自分自身とその子孫は除外）
+function buildParentTaskOptions(currentTaskId, selectedParentId) {
+    let html = '<option value="">（ルート - 独立タスク）</option>';
+    function recurse(task, depth) {
+        if (currentTaskId && (task.id === currentTaskId || isAncestor(currentTaskId, task.id))) return;
+        const indent = '　'.repeat(depth) + (depth > 0 ? '└ ' : '');
+        const sel = task.id === selectedParentId ? 'selected' : '';
+        html += `<option value="${task.id}" ${sel}>${indent}${escapeHtml(task.title || '(無題)')}</option>`;
+        const children = state.tasks
+            .filter(c => c.parentId === task.id)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+        children.forEach(c => recurse(c, depth + 1));
+    }
+    const roots = state.tasks
+        .filter(t => !t.parentId)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+    roots.forEach(r => recurse(r, 0));
+    return html;
+}
+
+// ========== トースト ==========
+function toast(msg, type = 'info') {
+    const div = document.createElement('div');
+    div.className = 'toast ' + type;
+    div.textContent = msg;
+    document.getElementById('toast-container').appendChild(div);
+    setTimeout(() => { div.style.opacity = '0'; div.style.transition = 'opacity 0.3s'; }, 2200);
+    setTimeout(() => div.remove(), 2600);
+}
+
+// ========== タブ切り替え ==========
+function showTab(tabId, btn) {
+    document.querySelectorAll('.content').forEach(d => d.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    if (btn) btn.classList.add('active');
+    if (tabId === 'tab-tasks') renderTasks();
+    if (tabId === 'tab-wbsgantt') { renderWBS(); renderGantt(); }
+}
+
+// ========== フォルダツリー ==========
+function renderFolderTree() {
+    const root = document.getElementById('folder-tree');
+    root.innerHTML = '';
+    const topLevel = state.folders.filter(f => !f.parent);
+    topLevel.forEach(f => root.appendChild(renderFolderNode(f, 0)));
+}
+function renderFolderNode(folder, depth) {
+    const wrap = document.createElement('div');
+    wrap.className = 'tree-node';
+    const item = document.createElement('div');
+    item.className = 'tree-item' + (state.selectedFolderId === folder.id ? ' selected' : '');
+    item.style.paddingLeft = (8 + depth * 14) + 'px';
+
+    const children = state.folders.filter(f => f.parent === folder.id);
+    const toggle = document.createElement('span');
+    toggle.className = 'tree-toggle';
+    toggle.textContent = children.length ? (folder.expanded ? '▼' : '▶') : '';
+    toggle.onclick = (e) => { e.stopPropagation(); folder.expanded = !folder.expanded; saveState(); renderFolderTree(); };
+
+    const icon = document.createElement('span');
+    icon.className = 'tree-icon';
+    icon.textContent = '📁';
+
+    const label = document.createElement('span');
+    label.textContent = folder.name;
+
+    const actions = document.createElement('div');
+    actions.className = 'item-actions';
+    const addBtn = document.createElement('button');
+    addBtn.textContent = '+'; addBtn.title = 'サブフォルダ追加';
+    addBtn.onclick = (e) => { e.stopPropagation(); addFolder(folder.id); };
+    const renBtn = document.createElement('button');
+    renBtn.textContent = '✏'; renBtn.title = '名前変更';
+    renBtn.onclick = (e) => { e.stopPropagation(); renameFolder(folder.id); };
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '🗑'; delBtn.title = '削除';
+    delBtn.onclick = (e) => { e.stopPropagation(); deleteFolder(folder.id); };
+    actions.append(addBtn, renBtn, delBtn);
+
+    item.append(toggle, icon, label, actions);
+    item.onclick = () => { state.selectedFolderId = folder.id; renderFolderTree(); renderMemoList(); };
+    wrap.appendChild(item);
+
+    if (folder.expanded) {
+        children.forEach(c => wrap.appendChild(renderFolderNode(c, depth + 1)));
+    }
+    return wrap;
+}
+function addFolder(parentId = null) {
+    const name = prompt('フォルダ名を入力:', '新しいフォルダ');
+    if (!name) return;
+    const folder = { id: uid(), name, parent: parentId, expanded: true };
+    state.folders.push(folder);
+    if (parentId) {
+        const p = state.folders.find(f => f.id === parentId);
+        if (p) p.expanded = true;
+    }
+    saveState(); renderFolderTree();
+}
+function renameFolder(id) {
+    const f = state.folders.find(x => x.id === id);
+    if (!f) return;
+    const name = prompt('フォルダ名:', f.name);
+    if (!name) return;
+    f.name = name;
+    saveState(); renderFolderTree();
+}
+function deleteFolder(id) {
+    if (state.folders.length <= 1) { toast('最低1つのフォルダが必要です', 'warning'); return; }
+    if (!confirm('フォルダとその中のメモを全て削除しますか？')) return;
+    // 子フォルダも再帰削除
+    const toDelete = new Set([id]);
+    let changed = true;
+    while (changed) {
+        changed = false;
+        state.folders.forEach(f => {
+            if (f.parent && toDelete.has(f.parent) && !toDelete.has(f.id)) {
+                toDelete.add(f.id); changed = true;
+            }
+        });
+    }
+    state.folders = state.folders.filter(f => !toDelete.has(f.id));
+    state.memos = state.memos.filter(m => !toDelete.has(m.folderId));
+    if (toDelete.has(state.selectedFolderId)) state.selectedFolderId = state.folders[0]?.id || null;
+    saveState(); renderFolderTree(); renderMemoList();
+}
+
+// ========== タグフィルタ ==========
+function renderTagFilter() {
+    const allTags = new Set();
+    state.memos.forEach(m => (m.tags || []).forEach(t => allTags.add(t)));
+    const container = document.getElementById('tag-filter-list');
+    container.innerHTML = '';
+    if (allTags.size === 0) {
+        container.innerHTML = '<div style="color:var(--text-dim);font-size:10px;">タグなし</div>';
+        return;
+    }
+    [...allTags].sort().forEach(tag => {
+        const chip = document.createElement('span');
+        chip.className = 'tag-chip' + (state.activeTagFilters.includes(tag) ? ' active' : '');
+        chip.textContent = '#' + tag;
+        chip.onclick = () => {
+            if (state.activeTagFilters.includes(tag)) {
+                state.activeTagFilters = state.activeTagFilters.filter(t => t !== tag);
+            } else {
+                state.activeTagFilters.push(tag);
+            }
+            renderTagFilter(); renderMemoList();
+        };
+        container.appendChild(chip);
+    });
+}
+
+// ========== メモ一覧 ==========
+function renderMemoList() {
+    const container = document.getElementById('memo-items');
+    container.innerHTML = '';
+    let memos = state.memos.filter(m => m.folderId === state.selectedFolderId);
+    if (state.activeTagFilters.length > 0) {
+        memos = memos.filter(m => state.activeTagFilters.every(t => (m.tags || []).includes(t)));
+    }
+    memos.sort((a, b) => (b.updated || 0) - (a.updated || 0));
+    if (memos.length === 0) {
+        container.innerHTML = '<div style="padding:14px;color:var(--text-dim);font-size:11px;text-align:center;">メモなし</div>';
+        return;
+    }
+    memos.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'memo-item' + (state.selectedMemoId === m.id ? ' selected' : '');
+        const date = new Date(m.updated || m.created || Date.now()).toLocaleDateString('ja-JP');
+        const tags = (m.tags || []).map(t => `<span class="tag-mini">#${escapeHtml(t)}</span>`).join('');
+        div.innerHTML = `
+            <div class="title">${escapeHtml(m.title || '無題')}</div>
+            <div class="meta">${date}</div>
+            <div class="tags">${tags}</div>
+        `;
+        div.onclick = () => loadMemo(m.id);
+        container.appendChild(div);
+    });
+}
+// ========== 議事メモタイトルのデフォルト/正規化 ==========
+function formatTemplate(template) {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const yy = String(yyyy).slice(-2);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const nn = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return (template || '')
+        .replace(/\{yyyy\}/g, yyyy)
+        .replace(/\{yy\}/g, yy)
+        .replace(/\{mm\}/g, mm)
+        .replace(/\{dd\}/g, dd)
+        .replace(/\{hh\}/g, hh)
+        .replace(/\{nn\}/g, nn)
+        .replace(/\{ss\}/g, ss);
+}
+const DEFAULT_MEMO_NAME_TEMPLATE = '{yyyy}-{mm}-{dd}-{hh}-{nn}.txt';
+const DEFAULT_MEMO_SUFFIX_TEMPLATE = '_{yy}{mm}{dd}.txt';
+function getDefaultMemoTitle() {
+    return formatTemplate(state.settings.memoNameTemplate || DEFAULT_MEMO_NAME_TEMPLATE);
+}
+function normalizeMemoTitle(title) {
+    title = (title || '').trim();
+    if (!title) return getDefaultMemoTitle();
+    // すでに .txt（または .md など拡張子）で終わっていればそのまま
+    if (/\.[a-z0-9]{1,5}$/i.test(title)) return title;
+    // 接尾語を付加
+    const suffix = formatTemplate(state.settings.memoSuffixTemplate || DEFAULT_MEMO_SUFFIX_TEMPLATE);
+    return title + suffix;
+}
+
+// ========== メモのファイル出力（拡張子別変換） ==========
+function sanitizeFilename(name) {
+    return (name || '').replace(/[\/\\:\*\?"<>\|]/g, '_').trim();
+}
+function getExtension(filename) {
+    const m = (filename || '').match(/\.([a-z0-9]{1,8})$/i);
+    return m ? m[1].toLowerCase() : 'txt';
+}
+function htmlToText(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html || '';
+    // <br> や <div> 区切りを改行に変換するため、いったん挿入
+    div.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+    div.querySelectorAll('div, p, h1, h2, h3, h4, li, tr').forEach(el => {
+        el.append('\n');
+    });
+    return (div.innerText || div.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+}
+function htmlToMarkdown(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html || '';
+    const md = convertNodeToMd(div).trim();
+    return md.replace(/\n{3,}/g, '\n\n');
+}
+function convertNodeToMd(node) {
+    let out = '';
+    node.childNodes.forEach(child => {
+        if (child.nodeType === Node.TEXT_NODE) {
+            out += child.textContent;
+        } else if (child.nodeType === Node.ELEMENT_NODE) {
+            const tag = child.tagName.toLowerCase();
+            const inner = convertNodeToMd(child);
+            switch (tag) {
+                case 'b': case 'strong': out += `**${inner}**`; break;
+                case 'i': case 'em': out += `*${inner}*`; break;
+                case 'h1': out += `\n# ${inner}\n`; break;
+                case 'h2': out += `\n## ${inner}\n`; break;
+                case 'h3': out += `\n### ${inner}\n`; break;
+                case 'h4': out += `\n#### ${inner}\n`; break;
+                case 'a':
+                    out += `[${inner}](${child.getAttribute('href') || ''})`; break;
+                case 'br': out += '\n'; break;
+                case 'div': case 'p': out += inner + '\n'; break;
+                case 'ul':
+                    child.querySelectorAll(':scope > li').forEach(li => {
+                        out += `- ${convertNodeToMd(li).trim()}\n`;
+                    });
+                    break;
+                case 'ol':
+                    let n = 1;
+                    child.querySelectorAll(':scope > li').forEach(li => {
+                        out += `${n++}. ${convertNodeToMd(li).trim()}\n`;
+                    });
+                    break;
+                case 'li': out += inner; break;
+                case 'span':
+                    if (child.classList.contains('marker')) {
+                        out += `==${inner}==`; // Markdown拡張ハイライト
+                    } else { out += inner; }
+                    break;
+                case 'table':
+                    out += '\n' + convertTableToMd(child) + '\n';
+                    break;
+                case 'img':
+                    out += `![](${child.getAttribute('src') || ''})`;
+                    break;
+                case 'code': out += `\`${inner}\``; break;
+                case 'pre': out += `\n\`\`\`\n${inner}\n\`\`\`\n`; break;
+                default: out += inner;
+            }
+        }
+    });
+    return out;
+}
+function convertTableToMd(table) {
+    const rows = [];
+    table.querySelectorAll('tr').forEach(tr => {
+        const cells = [];
+        tr.querySelectorAll('th, td').forEach(td => {
+            cells.push(td.textContent.trim().replace(/\|/g, '\\|').replace(/\n/g, ' '));
+        });
+        rows.push(cells);
+    });
+    if (rows.length === 0) return '';
+    let md = '| ' + rows[0].join(' | ') + ' |\n';
+    md += '| ' + rows[0].map(() => '---').join(' | ') + ' |\n';
+    for (let i = 1; i < rows.length; i++) {
+        md += '| ' + rows[i].join(' | ') + ' |\n';
+    }
+    return md;
+}
+function htmlToCSV(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html || '';
+    const tables = div.querySelectorAll('table');
+    if (tables.length > 0) {
+        let csv = '';
+        tables.forEach((table, idx) => {
+            if (idx > 0) csv += '\r\n';
+            table.querySelectorAll('tr').forEach(tr => {
+                const cells = [];
+                tr.querySelectorAll('th, td').forEach(td => {
+                    cells.push(csvEscape(td.textContent.trim()));
+                });
+                csv += cells.join(',') + '\r\n';
+            });
+        });
+        return csv;
+    }
+    return csvEscape(htmlToText(html)) + '\r\n';
+}
+function htmlToFullHtml(html, title) {
+    return `<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8"><title>${escapeHtml(title || '')}</title>
+<style>
+body{font-family:"Yu Gothic UI","Meiryo UI",sans-serif;line-height:1.7;max-width:800px;margin:24px auto;padding:0 20px;}
+table{border-collapse:collapse;}th,td{border:1px solid #ccc;padding:6px 10px;}
+.marker{background:#ffeb3b;}
+img{max-width:100%;}
+</style>
+</head><body>
+${html || ''}
+</body></html>`;
+}
+function convertMemoBody(memo) {
+    const ext = getExtension(memo.title);
+    const body = memo.body || '';
+    switch (ext) {
+        case 'md':
+        case 'markdown':
+            return { content: htmlToMarkdown(body), mime: 'text/markdown;charset=utf-8' };
+        case 'html':
+        case 'htm':
+            return { content: htmlToFullHtml(body, memo.title), mime: 'text/html;charset=utf-8' };
+        case 'csv':
+            return { content: '\ufeff' + htmlToCSV(body), mime: 'text/csv;charset=utf-8' };
+        case 'txt':
+        default:
+            return { content: htmlToText(body), mime: 'text/plain;charset=utf-8' };
+    }
+}
+async function exportCurrentMemo() {
+    const memo = state.memos.find(m => m.id === state.selectedMemoId);
+    if (!memo) { toast('メモを選択してください', 'warning'); return; }
+    const filename = sanitizeFilename(memo.title || getDefaultMemoTitle());
+    const { content, mime } = convertMemoBody(memo);
+    if (workFolderHandle) {
+        const ok = await writeToWorkFolder(filename, content);
+        if (ok) { toast(`📄 ${filename} を保存しました`, 'success'); return; }
+    }
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast(`📄 ${filename} をダウンロードしました`, 'success');
+}
+async function exportAllMemos() {
+    if (state.memos.length === 0) { toast('メモがありません', 'warning'); return; }
+    if (!workFolderHandle) {
+        toast('一括出力にはワークフォルダ設定が必要です', 'warning');
+        return;
+    }
+    let count = 0;
+    for (const memo of state.memos) {
+        const filename = sanitizeFilename(memo.title || getDefaultMemoTitle());
+        const { content } = convertMemoBody(memo);
+        const ok = await writeToWorkFolder(filename, content);
+        if (ok) count++;
+    }
+    toast(`${count}件のメモを書き出しました`, 'success');
+}
+function toggleSidebar() {
+    const el = document.getElementById('sidebar');
+    el.classList.toggle('collapsed');
+    document.getElementById('sidebar-toggle').textContent = el.classList.contains('collapsed') ? '»' : '«';
+}
+function toggleMemoList() {
+    const el = document.getElementById('memo-list');
+    el.classList.toggle('collapsed');
+    document.getElementById('memo-list-toggle').textContent = el.classList.contains('collapsed') ? '»' : '«';
+}
+
+function newMemo() {
+    if (!state.selectedFolderId) { toast('フォルダを選択してください', 'warning'); return; }
+    const memo = {
+        id: uid(), folderId: state.selectedFolderId,
+        title: getDefaultMemoTitle(), body: '', tags: [],
+        created: Date.now(), updated: Date.now()
+    };
+    state.memos.push(memo);
+    state.selectedMemoId = memo.id;
+    saveState();
+    renderMemoList(); renderTagFilter(); loadMemoIntoEditor(memo);
+    // タイトル欄にフォーカスして即編集できるように
+    setTimeout(() => {
+        const inp = document.getElementById('memo-title');
+        if (inp) { inp.focus(); inp.select(); }
+    }, 30);
+}
+function loadMemo(id) {
+    state.selectedMemoId = id;
+    const memo = state.memos.find(m => m.id === id);
+    if (memo) loadMemoIntoEditor(memo);
+    renderMemoList();
+}
+function loadMemoIntoEditor(memo) {
+    document.getElementById('memo-title').value = memo.title;
+    document.getElementById('editor').innerHTML = memo.body || '';
+    renderTagInput();
+}
+function onTitleChange() {
+    const memo = state.memos.find(m => m.id === state.selectedMemoId);
+    if (!memo) return;
+    memo.title = document.getElementById('memo-title').value;
+    memo.updated = Date.now();
+    saveState();
+    renderMemoList();
+}
+function onTitleBlur() {
+    const memo = state.memos.find(m => m.id === state.selectedMemoId);
+    if (!memo) return;
+    const inp = document.getElementById('memo-title');
+    const normalized = normalizeMemoTitle(inp.value);
+    if (normalized !== inp.value) {
+        inp.value = normalized;
+        memo.title = normalized;
+        memo.updated = Date.now();
+        saveState();
+        renderMemoList();
+    }
+}
+function onEditorInput() {
+    const memo = state.memos.find(m => m.id === state.selectedMemoId);
+    if (!memo) return;
+    memo.body = document.getElementById('editor').innerHTML;
+    memo.updated = Date.now();
+    // WYSIWYG処理：マークダウン記法を即時変換
+    processMarkdownInline();
+    saveState();
+}
+function escapeHtml(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+// ========== タグ入力 ==========
+function renderTagInput() {
+    const memo = state.memos.find(m => m.id === state.selectedMemoId);
+    const wrap = document.getElementById('tag-input-wrap');
+    // 既存のタグchipを削除（input以外）
+    [...wrap.querySelectorAll('.tag-mini')].forEach(c => c.remove());
+    if (!memo) return;
+    (memo.tags || []).forEach(tag => {
+        const chip = document.createElement('span');
+        chip.className = 'tag-mini';
+        chip.textContent = '#' + tag + ' ×';
+        chip.title = 'クリックで削除';
+        chip.onclick = () => {
+            memo.tags = memo.tags.filter(t => t !== tag);
+            saveState(); renderTagInput(); renderTagFilter(); renderMemoList();
+        };
+        wrap.insertBefore(chip, document.getElementById('tag-input'));
+    });
+}
+function onTagKeydown(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const input = e.target;
+    const tag = input.value.trim().replace(/^#/, '');
+    if (!tag) return;
+    const memo = state.memos.find(m => m.id === state.selectedMemoId);
+    if (!memo) { toast('メモが選択されていません', 'warning'); return; }
+    memo.tags = memo.tags || [];
+    if (!memo.tags.includes(tag)) memo.tags.push(tag);
+    input.value = '';
+    saveState(); renderTagInput(); renderTagFilter(); renderMemoList();
+}
+
+// ========== エディタ機能 ==========
+function execCmd(cmd, val = null) {
+    document.execCommand(cmd, false, val);
+    document.getElementById('editor').focus();
+    onEditorInput();
+}
+function highlight() {
+    document.execCommand('hiliteColor', false, 'var(--highlight)');
+    // 念のためspanで包む
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount && !sel.isCollapsed) {
+        const range = sel.getRangeAt(0);
+        const span = document.createElement('span');
+        span.className = 'marker';
+        try {
+            span.appendChild(range.extractContents());
+            range.insertNode(span);
+            sel.removeAllRanges();
+        } catch (e) { /* fallback execCommand結果を活かす */ }
+    }
+    onEditorInput();
+}
+function insertLink() {
+    const url = prompt('URL:', 'https://');
+    if (!url) return;
+    const sel = window.getSelection();
+    const text = sel.toString() || url;
+    document.execCommand('insertHTML', false, `<a href="${escapeHtml(url)}" target="_blank">${escapeHtml(text)}</a>`);
+    onEditorInput();
+}
+function insertHeading(level) {
+    document.execCommand('formatBlock', false, 'h' + level);
+    onEditorInput();
+}
+// ========== 日付・日時挿入 ==========
+const DEFAULT_DATE_FORMAT = '{yyyy}/{mm}/{dd}';
+const DEFAULT_DATETIME_FORMAT = '{yyyy}/{mm}/{dd} {hh}:{nn}';
+function insertDate() {
+    const fmt = state.settings.dateFormat || DEFAULT_DATE_FORMAT;
+    const text = formatTemplate(fmt);
+    const editor = document.getElementById('editor');
+    if (editor) editor.focus();
+    document.execCommand('insertText', false, text);
+    onEditorInput();
+}
+function insertDateTime() {
+    const fmt = state.settings.dateTimeFormat || DEFAULT_DATETIME_FORMAT;
+    const text = formatTemplate(fmt);
+    const editor = document.getElementById('editor');
+    if (editor) editor.focus();
+    document.execCommand('insertText', false, text);
+    onEditorInput();
+}
+
+function insertTable() {
+    // カーソルが表内にあれば入れ子防止＝既存の表ツールバー操作を促す
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount) {
+        const node = sel.anchorNode;
+        if (getClosestEl(node, 'TABLE')) {
+            toast('表の中です。表ツールバーから操作してください', 'warning');
+            return;
+        }
+    }
+    // 3×3 で即挿入（ヘッダ1行 + データ2行）
+    let html = '<table><thead><tr>';
+    for (let c = 0; c < 3; c++) html += '<th>列' + (c + 1) + '</th>';
+    html += '</tr></thead><tbody>';
+    for (let r = 0; r < 2; r++) {
+        html += '<tr>';
+        for (let c = 0; c < 3; c++) html += '<td>　</td>';
+        html += '</tr>';
+    }
+    html += '</tbody></table><div><br></div>';
+    document.execCommand('insertHTML', false, html);
+    onEditorInput();
+}
+
+// ========== 表操作 ==========
+let currentCell = null;
+let currentTable = null;
+
+function getClosestEl(node, tagName) {
+    while (node && node !== document.getElementById('editor') && node !== document.body) {
+        if (node.nodeType === Node.ELEMENT_NODE && node.tagName === tagName) return node;
+        node = node.parentNode;
+    }
+    return null;
+}
+function updateTableToolbar() {
+    // 自動表示はしない（右クリック/長押しで表示）
+    // ただし、ツールバー表示中にカーソルが表外に移動した時、ハイライトだけ更新
+    const toolbar = document.getElementById('table-toolbar');
+    if (!toolbar.classList.contains('active')) return;
+    // 既に表示中：何もしない（ユーザーが操作中なので維持）
+}
+function showTableToolbarAt(clientX, clientY) {
+    if (!currentTable || !currentCell) return;
+    const toolbar = document.getElementById('table-toolbar');
+    document.querySelectorAll('#editor .active-table').forEach(t => t.classList.remove('active-table'));
+    document.querySelectorAll('#editor .active-cell').forEach(c => c.classList.remove('active-cell'));
+    currentTable.classList.add('active-table');
+    currentCell.classList.add('active-cell');
+    // 一旦表示してサイズ計測してから位置調整
+    toolbar.classList.add('active');
+    const tbRect = toolbar.getBoundingClientRect();
+    let top = clientY + window.scrollY + 8;
+    let left = clientX + window.scrollX;
+    // 右側に画面はみ出し
+    if (left + tbRect.width > window.innerWidth - 8) {
+        left = window.innerWidth - tbRect.width - 8;
+    }
+    if (left < 8) left = 8;
+    // 下側に画面はみ出し
+    if (top + tbRect.height > window.scrollY + window.innerHeight - 8) {
+        top = clientY + window.scrollY - tbRect.height - 8;
+    }
+    toolbar.style.top = top + 'px';
+    toolbar.style.left = left + 'px';
+}
+function hideTableToolbar() {
+    document.getElementById('table-toolbar').classList.remove('active');
+    document.querySelectorAll('#editor .active-table').forEach(t => t.classList.remove('active-table'));
+    document.querySelectorAll('#editor .active-cell').forEach(c => c.classList.remove('active-cell'));
+    currentCell = null;
+    currentTable = null;
+}
+function tableAddRow(pos) {
+    if (!currentCell) return;
+    const tr = currentCell.closest('tr');
+    if (!tr) return;
+    const newTr = document.createElement('tr');
+    const cellCount = Array.from(tr.cells).reduce((s, c) => s + (parseInt(c.getAttribute('colspan') || '1')), 0);
+    for (let i = 0; i < cellCount; i++) {
+        const td = document.createElement('td');
+        td.innerHTML = '　';
+        newTr.appendChild(td);
+    }
+    if (pos === 'above') tr.parentNode.insertBefore(newTr, tr);
+    else tr.parentNode.insertBefore(newTr, tr.nextSibling);
+    onEditorInput();
+    setTimeout(updateTableToolbar, 30);
+}
+function tableAddCol(pos) {
+    if (!currentCell || !currentTable) return;
+    const cell = currentCell;
+    const tr = cell.parentNode;
+    const colIdx = Array.from(tr.children).indexOf(cell);
+    currentTable.querySelectorAll('tr').forEach(row => {
+        const isHead = row.parentNode.tagName === 'THEAD';
+        const newCell = document.createElement(isHead ? 'th' : 'td');
+        newCell.innerHTML = isHead ? '列' : '　';
+        const targetCell = row.children[colIdx];
+        if (!targetCell) {
+            row.appendChild(newCell); return;
+        }
+        if (pos === 'left') row.insertBefore(newCell, targetCell);
+        else row.insertBefore(newCell, targetCell.nextSibling);
+    });
+    onEditorInput();
+    setTimeout(updateTableToolbar, 30);
+}
+function tableDeleteRow() {
+    if (!currentCell || !currentTable) return;
+    const tr = currentCell.closest('tr');
+    if (!tr) return;
+    const allRows = currentTable.querySelectorAll('tr');
+    if (allRows.length <= 1) {
+        if (confirm('最後の行です。表全体を削除しますか？')) tableDelete();
+        return;
+    }
+    tr.remove();
+    onEditorInput();
+    hideTableToolbar();
+}
+function tableDeleteCol() {
+    if (!currentCell || !currentTable) return;
+    const cell = currentCell;
+    const colIdx = Array.from(cell.parentNode.children).indexOf(cell);
+    const rows = currentTable.querySelectorAll('tr');
+    if (rows[0].children.length <= 1) {
+        if (confirm('最後の列です。表全体を削除しますか？')) tableDelete();
+        return;
+    }
+    rows.forEach(row => {
+        if (row.children[colIdx]) row.children[colIdx].remove();
+    });
+    onEditorInput();
+    hideTableToolbar();
+}
+function tableMergeRight() {
+    if (!currentCell) return;
+    const cell = currentCell;
+    const next = cell.nextElementSibling;
+    if (!next || (next.tagName !== 'TD' && next.tagName !== 'TH')) {
+        toast('右に結合できるセルがありません', 'warning'); return;
+    }
+    const curSpan = parseInt(cell.getAttribute('colspan') || '1');
+    const nextSpan = parseInt(next.getAttribute('colspan') || '1');
+    cell.setAttribute('colspan', curSpan + nextSpan);
+    if (next.textContent.trim()) cell.innerHTML += ' ' + next.innerHTML;
+    next.remove();
+    onEditorInput();
+    setTimeout(updateTableToolbar, 30);
+}
+function tableMergeDown() {
+    if (!currentCell || !currentTable) return;
+    const cell = currentCell;
+    const tr = cell.parentNode;
+    const colIdx = Array.from(tr.children).indexOf(cell);
+    const allRows = Array.from(currentTable.querySelectorAll('tr'));
+    const rowIdx = allRows.indexOf(tr);
+    if (rowIdx + 1 >= allRows.length) { toast('下に結合できるセルがありません', 'warning'); return; }
+    const nextRow = allRows[rowIdx + 1];
+    const target = nextRow.children[colIdx];
+    if (!target) { toast('対象セルが見つかりません', 'warning'); return; }
+    const curSpan = parseInt(cell.getAttribute('rowspan') || '1');
+    const targetSpan = parseInt(target.getAttribute('rowspan') || '1');
+    cell.setAttribute('rowspan', curSpan + targetSpan);
+    if (target.textContent.trim()) cell.innerHTML += ' ' + target.innerHTML;
+    target.remove();
+    onEditorInput();
+    setTimeout(updateTableToolbar, 30);
+}
+// セルを横（左右）にN個に分割：内部テーブルをネスト
+function tableSplitH() {
+    if (!currentCell) return;
+    const n = parseInt(prompt('横にいくつに分割しますか？', '2') || '0');
+    if (!n || n < 2) { return; }
+    splitCellNested(currentCell, n, 'h');
+}
+// セルを縦（上下）にN個に分割
+function tableSplitV() {
+    if (!currentCell) return;
+    const n = parseInt(prompt('縦にいくつに分割しますか？', '2') || '0');
+    if (!n || n < 2) { return; }
+    splitCellNested(currentCell, n, 'v');
+}
+function splitCellNested(cell, n, dir) {
+    const existing = cell.innerHTML;
+    let html = '<table class="split-table"><tbody>';
+    if (dir === 'h') {
+        html += '<tr>';
+        html += `<td>${existing}</td>`;
+        for (let i = 1; i < n; i++) html += '<td>　</td>';
+        html += '</tr>';
+    } else {
+        html += `<tr><td>${existing}</td></tr>`;
+        for (let i = 1; i < n; i++) html += '<tr><td>　</td></tr>';
+    }
+    html += '</tbody></table>';
+    cell.innerHTML = html;
+    cell.classList.add('split-host');
+    onEditorInput();
+    setTimeout(updateTableToolbar, 30);
+}
+
+// 結合解除＋分割解除（自動判定）
+function tableUnmerge() {
+    if (!currentCell || !currentTable) return;
+    const cell = currentCell;
+    let didSomething = false;
+
+    // ① まず分割テーブル（ネスト）を解除
+    //    最も内側＝カーソルがある分割セルから順に解除する
+    //    cellが分割テーブルのtdの場合、その親の.split-tableを解除する必要があるため、
+    //    現在のセルがsplit-tableの中にあるか、split-hostかをチェック
+    let target = cell;
+    let innerSplit = target.querySelector(':scope > table.split-table');
+    if (!innerSplit) {
+        // 自分自身がsplit-table内のセルの場合、親のsplit-tableを解除
+        const parentSplit = cell.closest('table.split-table');
+        if (parentSplit) {
+            // split-tableを包んでいるホストセルを取得
+            const host = parentSplit.parentElement;
+            if (host && (host.tagName === 'TD' || host.tagName === 'TH')) {
+                target = host;
+                innerSplit = parentSplit;
+            }
+        }
+    }
+    if (innerSplit) {
+        // 分割テーブル内の全セルの内容を結合してホストに展開
+        const inner = innerSplit.querySelectorAll('td, th');
+        const merged = Array.from(inner)
+            .map(c => c.innerHTML.trim())
+            .filter(s => s && s !== '　')
+            .join(' ');
+        target.innerHTML = merged || '　';
+        target.classList.remove('split-host');
+        currentCell = target;
+        didSomething = true;
+    }
+
+    // ② colspan / rowspan を 1 に戻して、消えていたセルを復元
+    if (!didSomething) {
+        const cs = parseInt(cell.getAttribute('colspan') || '1');
+        const rs = parseInt(cell.getAttribute('rowspan') || '1');
+        if (cs > 1) {
+            cell.removeAttribute('colspan');
+            for (let i = 1; i < cs; i++) {
+                const newCell = document.createElement(cell.tagName);
+                newCell.innerHTML = '　';
+                cell.parentNode.insertBefore(newCell, cell.nextSibling);
+            }
+            didSomething = true;
+        }
+        if (rs > 1) {
+            const tr = cell.parentNode;
+            const colIdx = Array.from(tr.children).indexOf(cell);
+            const allRows = Array.from(currentTable.querySelectorAll('tr'));
+            const rowIdx = allRows.indexOf(tr);
+            cell.removeAttribute('rowspan');
+            for (let i = 1; i < rs; i++) {
+                const targetRow = allRows[rowIdx + i];
+                if (!targetRow) break;
+                const newCell = document.createElement('td');
+                newCell.innerHTML = '　';
+                targetRow.insertBefore(newCell, targetRow.children[colIdx] || null);
+            }
+            didSomething = true;
+        }
+    }
+
+    if (!didSomething) {
+        toast('解除対象がありません（結合・分割されていないセル）', 'warning');
+        return;
+    }
+    onEditorInput();
+    setTimeout(updateTableToolbar, 30);
+}
+function tableDelete() {
+    if (!currentTable) return;
+    if (confirm('この表を削除しますか？')) {
+        currentTable.remove();
+        onEditorInput();
+        hideTableToolbar();
+    }
+}
+function tableResetSize() {
+    if (!currentTable) return;
+    currentTable.querySelectorAll('td, th').forEach(c => { c.style.width = ''; });
+    currentTable.querySelectorAll('tr').forEach(r => { r.style.height = ''; });
+    onEditorInput();
+    setTimeout(updateTableToolbar, 30);
+    toast('セルサイズを自動に戻しました', 'success');
+}
+
+// ========== セルのリサイズ（列幅・行高） ==========
+const RESIZE_EDGE = 6; // px - リサイズ判定の幅
+let cellResize = null; // { cell, startX, startY, startW, startH, dir }
+
+function setColumnWidthForCell(cell, width) {
+    // 同じ列の全てのセルにwidthを反映
+    const table = cell.closest('table');
+    if (!table) return;
+    const tr = cell.parentNode;
+    const colIdx = Array.from(tr.children).indexOf(cell);
+    // 該当列が分割テーブル内ならそのtable内、外ならその外側tableで処理
+    table.querySelectorAll(':scope > thead > tr, :scope > tbody > tr, :scope > tr').forEach(row => {
+        const c = row.children[colIdx];
+        if (c) c.style.width = width + 'px';
+    });
+}
+function detectResizeMode(e, cell) {
+    const rect = cell.getBoundingClientRect();
+    const dx = rect.right - e.clientX;
+    const dy = rect.bottom - e.clientY;
+    if (dx >= -2 && dx <= RESIZE_EDGE) return 'col';
+    if (dy >= -2 && dy <= RESIZE_EDGE) return 'row';
+    return null;
+}
+function setupCellResize() {
+    const editor = document.getElementById('editor');
+    if (!editor) return;
+    editor.addEventListener('mousemove', (e) => {
+        if (cellResize) return; // ドラッグ中はカーソル維持
+        const cell = e.target.closest('td, th');
+        if (!cell) { editor.style.cursor = ''; return; }
+        const mode = detectResizeMode(e, cell);
+        editor.style.cursor = mode === 'col' ? 'col-resize' : (mode === 'row' ? 'row-resize' : '');
+    });
+    editor.addEventListener('mousedown', (e) => {
+        const cell = e.target.closest('td, th');
+        if (!cell) return;
+        const mode = detectResizeMode(e, cell);
+        if (!mode) return;
+        e.preventDefault();
+        const rect = cell.getBoundingClientRect();
+        cellResize = {
+            cell, dir: mode,
+            startX: e.clientX, startY: e.clientY,
+            startW: rect.width, startH: rect.height
+        };
+        document.body.style.userSelect = 'none';
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!cellResize) return;
+        if (cellResize.dir === 'col') {
+            const newW = Math.max(20, Math.round(cellResize.startW + (e.clientX - cellResize.startX)));
+            setColumnWidthForCell(cellResize.cell, newW);
+        } else {
+            const newH = Math.max(20, Math.round(cellResize.startH + (e.clientY - cellResize.startY)));
+            const tr = cellResize.cell.parentNode;
+            if (tr) tr.style.height = newH + 'px';
+        }
+    });
+    document.addEventListener('mouseup', () => {
+        if (cellResize) {
+            onEditorInput(); // 保存
+            cellResize = null;
+            document.body.style.userSelect = '';
+            const editor = document.getElementById('editor');
+            if (editor) editor.style.cursor = '';
+        }
+    });
+    // タッチ操作対応（モバイル）
+    editor.addEventListener('touchstart', (e) => {
+        const t = e.touches[0];
+        const cell = document.elementFromPoint(t.clientX, t.clientY)?.closest('td, th');
+        if (!cell) return;
+        const fakeEvt = { clientX: t.clientX, clientY: t.clientY };
+        const mode = detectResizeMode(fakeEvt, cell);
+        if (!mode) return;
+        e.preventDefault();
+        const rect = cell.getBoundingClientRect();
+        cellResize = {
+            cell, dir: mode,
+            startX: t.clientX, startY: t.clientY,
+            startW: rect.width, startH: rect.height
+        };
+    }, { passive: false });
+    document.addEventListener('touchmove', (e) => {
+        if (!cellResize) return;
+        const t = e.touches[0];
+        if (cellResize.dir === 'col') {
+            const newW = Math.max(20, Math.round(cellResize.startW + (t.clientX - cellResize.startX)));
+            setColumnWidthForCell(cellResize.cell, newW);
+        } else {
+            const newH = Math.max(20, Math.round(cellResize.startH + (t.clientY - cellResize.startY)));
+            const tr = cellResize.cell.parentNode;
+            if (tr) tr.style.height = newH + 'px';
+        }
+        e.preventDefault();
+    }, { passive: false });
+    document.addEventListener('touchend', () => {
+        if (cellResize) {
+            onEditorInput();
+            cellResize = null;
+        }
+    });
+}
+
+// ========== マークダウンWYSIWYG ==========
+// **bold** → <b>bold</b>, *italic* → <i>italic</i>, [text](url) → リンク, # 見出し
+function processMarkdownInline() {
+    const editor = document.getElementById('editor');
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const node = range.startContainer;
+    if (node.nodeType !== Node.TEXT_NODE) return;
+    const text = node.textContent;
+
+    // **bold**
+    let m = text.match(/\*\*([^\*]+)\*\*/);
+    if (m) {
+        const before = text.slice(0, m.index);
+        const after = text.slice(m.index + m[0].length);
+        const b = document.createElement('b');
+        b.textContent = m[1];
+        const afterNode = document.createTextNode(after);
+        const beforeNode = document.createTextNode(before);
+        const parent = node.parentNode;
+        parent.insertBefore(beforeNode, node);
+        parent.insertBefore(b, node);
+        parent.insertBefore(afterNode, node);
+        parent.removeChild(node);
+        // カーソルをafterの末尾に
+        const r = document.createRange();
+        r.setStart(afterNode, 0); r.setEnd(afterNode, 0);
+        sel.removeAllRanges(); sel.addRange(r);
+        return;
+    }
+    // [text](url)
+    m = text.match(/\[([^\]]+)\]\(([^)]+)\)/);
+    if (m) {
+        const before = text.slice(0, m.index);
+        const after = text.slice(m.index + m[0].length);
+        const a = document.createElement('a');
+        a.href = m[2]; a.target = '_blank'; a.textContent = m[1];
+        const afterNode = document.createTextNode(after);
+        const beforeNode = document.createTextNode(before);
+        const parent = node.parentNode;
+        parent.insertBefore(beforeNode, node);
+        parent.insertBefore(a, node);
+        parent.insertBefore(afterNode, node);
+        parent.removeChild(node);
+        const r = document.createRange();
+        r.setStart(afterNode, 0); r.setEnd(afterNode, 0);
+        sel.removeAllRanges(); sel.addRange(r);
+        return;
+    }
+    // # 見出し（行頭）
+    const lineMatch = text.match(/^(#{1,3}) (.+)$/);
+    if (lineMatch && range.startOffset === text.length) {
+        // この行を見出し化
+        const level = lineMatch[1].length;
+        document.execCommand('formatBlock', false, 'h' + level);
+        // # を削除
+        const newNode = sel.getRangeAt(0).startContainer;
+        if (newNode.nodeType === Node.TEXT_NODE) {
+            newNode.textContent = newNode.textContent.replace(/^#{1,3} /, '');
+        }
+    }
+}
+
+// ========== エディタキーハンドラ ==========
+function onEditorKeydown(e) {
+    // Tab → インデント（半角スペース×設定値）
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        const spaces = '\u00A0'.repeat(state.settings.indent || 4);
+        document.execCommand('insertHTML', false, spaces);
+        return;
+    }
+    // Ctrl+Shift+T → タスク追加
+    if (e.ctrlKey && e.shiftKey && (e.key === 'T' || e.key === 't')) {
+        e.preventDefault();
+        addTaskFromSelection();
+        return;
+    }
+    // Ctrl+B
+    if (e.ctrlKey && (e.key === 'b' || e.key === 'B')) {
+        // ブラウザデフォルトに任せる
+    }
+}
+
+// ========== ペースト処理（画像対応） ==========
+async function onEditorPaste(e) {
+    const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+    if (!items) return;
+    for (const item of items) {
+        if (item.type.startsWith('image/')) {
+            e.preventDefault();
+            const blob = item.getAsFile();
+            const dataUrl = await blobToDataURL(blob);
+            insertImageScaled(dataUrl);
+            return;
+        }
+    }
+}
+function blobToDataURL(blob) {
+    return new Promise(res => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result);
+        reader.readAsDataURL(blob);
+    });
+}
+function insertImageScaled(dataUrl, maxWidth = 600) {
+    const img = new Image();
+    img.onload = () => {
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (w > maxWidth) {
+            h = h * (maxWidth / w);
+            w = maxWidth;
+        }
+        const html = `<img src="${dataUrl}" style="width:${w}px;height:${h}px;" /><div><br></div>`;
+        document.getElementById('editor').focus();
+        document.execCommand('insertHTML', false, html);
+        onEditorInput();
+        toast('画像を貼り付けました（縮尺自動調整）', 'success');
+    };
+    img.src = dataUrl;
+}
+
+// ========== 画面キャプチャ（範囲指定） ==========
+async function startCapture() {
+    try {
+        // まず画面全体をキャプチャ
+        captureStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'never' }, audio: false });
+        const video = document.createElement('video');
+        video.srcObject = captureStream;
+        await video.play();
+        // 1フレーム取得
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        const fullDataUrl = canvas.toDataURL('image/png');
+        captureStream.getTracks().forEach(t => t.stop());
+        captureStream = null;
+        // 範囲選択UI起動
+        showRangeSelector(fullDataUrl, canvas.width, canvas.height);
+    } catch (err) {
+        toast('キャプチャ取得失敗: ' + err.message, 'error');
+    }
+}
+function showRangeSelector(fullDataUrl, sourceW, sourceH) {
+    const overlay = document.getElementById('capture-overlay');
+    const selection = document.getElementById('capture-selection');
+    const hint = document.getElementById('capture-hint');
+    overlay.style.background = `rgba(0,0,0,0.5) url("${fullDataUrl}") center/contain no-repeat`;
+    overlay.classList.add('active');
+    hint.style.display = 'block';
+    selection.style.width = '0'; selection.style.height = '0';
+
+    let startX = 0, startY = 0, isDragging = false;
+    const onDown = (e) => {
+        isDragging = true;
+        startX = e.clientX; startY = e.clientY;
+        selection.style.left = startX + 'px';
+        selection.style.top = startY + 'px';
+        selection.style.width = '0'; selection.style.height = '0';
+    };
+    const onMove = (e) => {
+        if (!isDragging) return;
+        const w = e.clientX - startX, h = e.clientY - startY;
+        selection.style.left = (w < 0 ? e.clientX : startX) + 'px';
+        selection.style.top = (h < 0 ? e.clientY : startY) + 'px';
+        selection.style.width = Math.abs(w) + 'px';
+        selection.style.height = Math.abs(h) + 'px';
+    };
+    const onUp = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        const rect = selection.getBoundingClientRect();
+        if (rect.width < 5 || rect.height < 5) { cleanup(); return; }
+        // ビューポート座標→ソース画像座標へ
+        const screenW = window.innerWidth, screenH = window.innerHeight;
+        const scale = Math.min(screenW / sourceW, screenH / sourceH);
+        const dispW = sourceW * scale, dispH = sourceH * scale;
+        const offsetX = (screenW - dispW) / 2;
+        const offsetY = (screenH - dispH) / 2;
+        const sx = (rect.left - offsetX) / scale;
+        const sy = (rect.top - offsetY) / scale;
+        const sw = rect.width / scale;
+        const sh = rect.height / scale;
+        // 切り出し
+        const img = new Image();
+        img.onload = () => {
+            const c = document.createElement('canvas');
+            c.width = sw; c.height = sh;
+            c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+            const cropped = c.toDataURL('image/png');
+            insertImageScaled(cropped);
+            cleanup();
+        };
+        img.src = fullDataUrl;
+    };
+    const onKey = (e) => { if (e.key === 'Escape') cleanup(); };
+    function cleanup() {
+        overlay.classList.remove('active');
+        overlay.style.background = '';
+        hint.style.display = 'none';
+        overlay.removeEventListener('mousedown', onDown);
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        window.removeEventListener('keydown', onKey);
+    }
+    overlay.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('keydown', onKey);
+}
+
+// ========== 録音 / 音声ファイル管理 ==========
+// 録音はワークフォルダの recordings/ サブフォルダに保存し、メモにはリンクだけを挿入
+const RECORDINGS_SUBDIR = 'recordings';
+
+async function getRecordingsDir() {
+    if (!workFolderHandle) return null;
+    const ok = await fsEnsurePermission(workFolderHandle, 'readwrite');
+    if (!ok) return null;
+    try {
+        return await workFolderHandle.getDirectoryHandle(RECORDINGS_SUBDIR, { create: true });
+    } catch (e) {
+        console.error('recordings サブフォルダ作成失敗:', e);
+        return workFolderHandle; // フォールバック：ルート直下
+    }
+}
+async function saveRecordingFile(blob, filename) {
+    const dir = await getRecordingsDir();
+    if (!dir) return false;
+    try {
+        const fh = await dir.getFileHandle(filename, { create: true });
+        const w = await fh.createWritable();
+        await w.write(blob);
+        await w.close();
+        return true;
+    } catch (e) {
+        console.error('録音保存失敗:', e);
+        toast('録音保存失敗: ' + e.message, 'error');
+        return false;
+    }
+}
+async function readRecordingFile(filename) {
+    const dir = await getRecordingsDir();
+    if (!dir) return null;
+    try {
+        const fh = await dir.getFileHandle(filename);
+        return await fh.getFile();
+    } catch (e) {
+        return null;
+    }
+}
+function insertAudioLinkToMemo(filename, duration) {
+    const dur = duration ? ` (${String(Math.floor(duration / 60)).padStart(2, '0')}:${String(duration % 60).padStart(2, '0')})` : '';
+    const ts = new Date().toLocaleString('ja-JP');
+    const html = `<div class="memo-audio" contenteditable="false">
+<span class="memo-audio-icon">🎙</span>
+<a href="#" class="memo-audio-link" data-filename="${escapeHtml(filename)}" onclick="playRecordingByLink(event,'${escapeHtml(filename)}')">${escapeHtml(filename)}</a>
+<span class="memo-audio-meta">${ts}${dur}</span>
+</div><div><br></div>`;
+    const editor = document.getElementById('editor');
+    if (!editor) return;
+    editor.focus();
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand('insertHTML', false, html);
+    onEditorInput();
+}
+let _currentAudio = null;
+async function playRecordingByLink(e, filename) {
+    if (e) e.preventDefault();
+    if (!workFolderHandle) {
+        toast('ワークフォルダ設定が必要です（設定 → フォルダ選択）', 'warning');
+        return;
+    }
+    const file = await readRecordingFile(filename);
+    if (!file) {
+        toast('ファイルが見つかりません: ' + filename, 'error');
+        return;
+    }
+    const url = URL.createObjectURL(file);
+    if (_currentAudio) {
+        _currentAudio.pause();
+        try { URL.revokeObjectURL(_currentAudio.src); } catch {}
+    }
+    _currentAudio = new Audio(url);
+    _currentAudio.onended = () => { try { URL.revokeObjectURL(url); } catch {} };
+    _currentAudio.onerror = () => toast('再生エラー: ' + filename, 'error');
+    _currentAudio.play().then(() => {
+        toast('▶ 再生中: ' + filename, 'success');
+    }).catch(err => toast('再生失敗: ' + err.message, 'error'));
+}
+
+async function loadMicDevices() {
+    try {
+        const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        tempStream.getTracks().forEach(t => t.stop());
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const mics = devices.filter(d => d.kind === 'audioinput');
+        const sel = document.getElementById('setting-mic-device');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">（デフォルトマイク）</option>';
+        mics.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.deviceId;
+            opt.textContent = m.label || ('マイク ' + (m.deviceId || '').slice(0, 6));
+            if (m.deviceId === state.settings.micDeviceId) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        toast(`${mics.length}個のマイクを検出`, 'success');
+    } catch (e) {
+        toast('マイク取得失敗: ' + e.message, 'error');
+    }
+}
+async function testMic() {
+    const deviceId = state.settings.micDeviceId || document.getElementById('setting-mic-device')?.value;
+    const constraints = { audio: deviceId ? { deviceId: { exact: deviceId } } : true };
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const rec = new MediaRecorder(stream);
+        const chunks = [];
+        rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        rec.onstop = () => {
+            const blob = new Blob(chunks, { type: 'audio/webm' });
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            audio.onended = () => URL.revokeObjectURL(url);
+            audio.play();
+            stream.getTracks().forEach(t => t.stop());
+            toast('再生中...', 'success');
+        };
+        rec.start();
+        toast('3秒間録音します...', 'warning');
+        setTimeout(() => rec.stop(), 3000);
+    } catch (e) {
+        toast('マイクテスト失敗: ' + e.message, 'error');
+    }
+}
+async function toggleRecording() {
+    const btn = document.getElementById('btn-record');
+    const ind = document.getElementById('rec-indicator');
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            toast('録音APIが使えません。「🎵 音声追加」ボタンで既存ファイルを取り込んでください', 'error');
+            return;
+        }
+        if (!workFolderHandle) {
+            toast('録音にはワークフォルダ設定が必要です（設定で選択）', 'warning');
+            openSettings();
+            return;
+        }
+        try {
+            const deviceId = state.settings.micDeviceId;
+            const constraints = { audio: deviceId ? { deviceId: { exact: deviceId } } : true };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            let mimeType = 'audio/webm';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'audio/mp4';
+                if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
+            }
+            mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+            recordChunks = [];
+            mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordChunks.push(e.data); };
+            mediaRecorder.onerror = (e) => {
+                console.error('[録音] エラー:', e);
+                toast('録音エラー: ' + (e.error?.message || 'unknown'), 'error');
+            };
+            mediaRecorder.onstop = async () => {
+                if (recordChunks.length === 0) {
+                    toast('録音データが取得できませんでした', 'error');
+                    stream.getTracks().forEach(t => t.stop());
+                    return;
+                }
+                const actualMime = mediaRecorder.mimeType || 'audio/webm';
+                const ext = actualMime.includes('mp4') ? 'mp4' : 'webm';
+                const blob = new Blob(recordChunks, { type: actualMime });
+                const duration = Math.floor((Date.now() - recordStartTime) / 1000);
+                const stamp = formatTemplate('{yyyy}{mm}{dd}_{hh}{nn}{ss}');
+                const filename = `rec_${stamp}.${ext}`;
+                stream.getTracks().forEach(t => t.stop());
+
+                const ok = await saveRecordingFile(blob, filename);
+                if (ok) {
+                    insertAudioLinkToMemo(filename, duration);
+                    toast(`録音保存: ${RECORDINGS_SUBDIR}/${filename} (${duration}秒)`, 'success');
+                } else {
+                    toast('録音ファイル保存に失敗しました', 'error');
+                }
+            };
+            mediaRecorder.start(1000);
+            recordStartTime = Date.now();
+            btn.classList.add('recording');
+            btn.textContent = '⏹ 録音停止';
+            ind.classList.add('active');
+            recordTimerInterval = setInterval(() => {
+                const sec = Math.floor((Date.now() - recordStartTime) / 1000);
+                const m = String(Math.floor(sec / 60)).padStart(2, '0');
+                const s = String(sec % 60).padStart(2, '0');
+                document.getElementById('rec-timer').textContent = m + ':' + s;
+            }, 500);
+            toast('録音開始', 'success');
+        } catch (err) {
+            console.error('[録音] 取得失敗:', err);
+            let msg = err.message || err.name;
+            if (err.name === 'NotAllowedError') msg = 'マイクの使用が拒否されています';
+            else if (err.name === 'NotFoundError') msg = 'マイクが見つかりません';
+            else if (err.name === 'NotReadableError') msg = 'マイクが他のアプリで使用中です';
+            toast('🎙 ' + msg + '（「🎵 音声追加」で代替可能）', 'error');
+        }
+    } else {
+        try { mediaRecorder.stop(); } catch (e) { console.error(e); }
+        btn.classList.remove('recording');
+        btn.textContent = '🎙 録音開始';
+        ind.classList.remove('active');
+        clearInterval(recordTimerInterval);
+    }
+}
+function renderRecordings() {
+    const c = document.getElementById('recordings-list-container');
+    c.innerHTML = '';
+    if (state.recordings.length === 0) {
+        c.innerHTML = '<div style="color:var(--text-dim); font-size:10px;">録音なし</div>';
+        return;
+    }
+    state.recordings.slice().reverse().forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'recording-item';
+        const m = String(Math.floor(r.duration / 60)).padStart(2, '0');
+        const s = String(r.duration % 60).padStart(2, '0');
+        div.innerHTML = `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name} (${m}:${s})</span>`;
+        const playBtn = document.createElement('button');
+        playBtn.textContent = '▶'; playBtn.title = '再生';
+        playBtn.onclick = () => {
+            if (r.blobUrl) { new Audio(r.blobUrl).play(); }
+            else { toast('セッション終了済み（再生不可）', 'warning'); }
+        };
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '🗑';
+        delBtn.onclick = () => {
+            state.recordings = state.recordings.filter(x => x.id !== r.id);
+            saveState(); renderRecordings();
+        };
+        div.append(playBtn, delBtn);
+        c.appendChild(div);
+    });
+}
+
+// ========== タスク追加（エディタから） ==========
+function addTaskFromSelection() {
+    const sel = window.getSelection();
+    const text = sel ? sel.toString().trim() : '';
+    if (sel && sel.rangeCount) lastSelectionRange = sel.getRangeAt(0).cloneRange();
+    document.getElementById('pop-task-title').value = text;
+    document.getElementById('pop-task-start').value = '';
+    document.getElementById('pop-task-date').value = '';
+    document.getElementById('pop-task-owner').value = '';
+    document.getElementById('pop-task-status').value = '未着手';
+    // 親タスク選択肢を構築
+    document.getElementById('pop-task-parent').innerHTML = buildParentTaskOptions(null, null);
+    state.currentTaskMemoId = state.selectedMemoId;
+    document.getElementById('task-popup').classList.add('active');
+    setTimeout(() => document.getElementById('pop-task-title').focus(), 50);
+}
+function closeTaskPopup() {
+    document.getElementById('task-popup').classList.remove('active');
+}
+function saveTaskFromPopup() {
+    const title = document.getElementById('pop-task-title').value.trim();
+    if (!title) { toast('内容を入力してください', 'warning'); return; }
+    const parentVal = document.getElementById('pop-task-parent').value;
+    const task = {
+        id: uid(), title,
+        startDate: document.getElementById('pop-task-start').value,
+        date: document.getElementById('pop-task-date').value,
+        owner: document.getElementById('pop-task-owner').value,
+        status: document.getElementById('pop-task-status').value,
+        memoId: state.currentTaskMemoId,
+        wbsId: null,
+        parentId: parentVal || null,
+        order: state.tasks.length
+    };
+    state.tasks.push(task);
+    saveState();
+    closeTaskPopup();
+    toast('タスクを追加しました', 'success');
+}
+function addBlankTask() {
+    const task = {
+        id: uid(), title: '', date: '', startDate: '', owner: '', status: '未着手',
+        memoId: null, wbsId: null, parentId: null, order: state.tasks.length
+    };
+    state.tasks.push(task);
+    saveState(); renderTasks();
+    // 新規行のtitle inputにフォーカス
+    setTimeout(() => {
+        const input = document.querySelector(`#tasks-tbody input[data-tid="${task.id}"][data-field="title"]`);
+        if (input) { input.focus(); input.scrollIntoView({ block: 'center' }); }
+    }, 30);
+}
+
+// ========== タスク一覧描画 ==========
+function renderTasks() {
+    const tbody = document.getElementById('tasks-tbody');
+    tbody.innerHTML = '';
+    state.tasks.forEach(t => {
+        const tr = document.createElement('tr');
+        const memo = t.memoId ? state.memos.find(m => m.id === t.memoId) : null;
+        tr.innerHTML = `
+            <td><input type="text" value="${escapeHtml(t.title)}" data-tid="${t.id}" data-field="title" placeholder="内容を入力..."></td>
+            <td><select data-tid="${t.id}" data-field="parentId">${buildParentTaskOptions(t.id, t.parentId)}</select></td>
+            <td><input type="date" value="${t.startDate || ''}" data-tid="${t.id}" data-field="startDate"></td>
+            <td><input type="date" value="${t.date || ''}" data-tid="${t.id}" data-field="date"></td>
+            <td><input type="text" value="${escapeHtml(t.owner || '')}" data-tid="${t.id}" data-field="owner"></td>
+            <td>
+                <select data-tid="${t.id}" data-field="status">
+                    <option ${t.status === '未着手' ? 'selected' : ''}>未着手</option>
+                    <option ${t.status === '進行中' ? 'selected' : ''}>進行中</option>
+                    <option ${t.status === '完了' ? 'selected' : ''}>完了</option>
+                    <option ${t.status === '保留' ? 'selected' : ''}>保留</option>
+                </select>
+            </td>
+            <td style="font-size:10px;color:var(--text-dim);">${memo ? escapeHtml(memo.title) : '—'}</td>
+            <td><button class="btn-delete" data-tid="${t.id}" data-action="delete">🗑</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+    // バインド
+    tbody.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('change', e => {
+            const tid = e.target.dataset.tid;
+            const field = e.target.dataset.field;
+            const t = state.tasks.find(x => x.id === tid);
+            if (!t) return;
+            let val = e.target.value;
+            if (field === 'parentId') {
+                if (val === '') val = null;
+                if (val && (val === tid || isAncestor(tid, val))) {
+                    toast('循環参照になるため設定できません', 'error');
+                    renderTasks();
+                    return;
+                }
+            }
+            t[field] = val;
+            saveState();
+            updateStats();
+            if (field === 'parentId') renderTasks();
+        });
+        // 内容欄でEnter押下時に新規行追加して連続入力
+        if (el.dataset.field === 'title' && el.tagName === 'INPUT') {
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    // 編集を確定
+                    const tid = e.target.dataset.tid;
+                    const t = state.tasks.find(x => x.id === tid);
+                    if (t) { t.title = e.target.value; saveState(); }
+                    // 新規行を追加してフォーカス
+                    addBlankTask();
+                }
+            });
+        }
+    });
+    tbody.querySelectorAll('[data-action="delete"]').forEach(btn => {
+        btn.onclick = () => {
+            if (!confirm('このタスクを削除しますか？')) return;
+            state.tasks = state.tasks.filter(x => x.id !== btn.dataset.tid);
+            saveState(); renderTasks();
+        };
+    });
+    updateStats();
+}
+function updateStats() {
+    document.getElementById('stat-total').textContent = state.tasks.length;
+    document.getElementById('stat-todo').textContent = state.tasks.filter(t => t.status === '未着手').length;
+    document.getElementById('stat-doing').textContent = state.tasks.filter(t => t.status === '進行中').length;
+    document.getElementById('stat-done').textContent = state.tasks.filter(t => t.status === '完了').length;
+}
+
+// ========== WBS（タスク階層化） ==========
+function renderWBS() {
+    const tree = document.getElementById('wbs-tree');
+    if (!tree) return;
+    tree.innerHTML = '';
+    const roots = state.tasks.filter(t => !t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    roots.forEach(t => renderWBSNode(t, 0, tree));
+    if (roots.length === 0) {
+        tree.innerHTML = '<div style="color:var(--text-dim);text-align:center;margin-top:30px;padding:20px;">タスクがありません<br><br>「+ WBSタスク追加」または「タスク一覧」から追加してください</div>';
+    }
+}
+function renderWBSNode(task, depth, parentEl) {
+    const node = document.createElement('div');
+    const children = state.tasks.filter(t => t.parentId === task.id);
+    const isParent = children.length > 0;
+    const isSelected = state.selectedTaskId === task.id;
+    node.className = 'wbs-node' + (isParent ? ' parent' : '') + (isSelected ? ' selected' : '');
+    node.style.setProperty('--depth', depth);
+    node.draggable = true;
+    node.dataset.tid = task.id;
+
+    const toggle = document.createElement('span');
+    toggle.className = 'toggle';
+    toggle.textContent = isParent ? '▼' : '·';
+
+    // インライン編集モード
+    if (editingNodeId === task.id) {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'title-edit';
+        input.value = task.title || '';
+        input.placeholder = 'タスク名 (Enter:同階層へ / Tab:子追加 / Shift+Tab:親階層 / Esc:取消)';
+        input.style.cssText = 'flex:1; background:var(--bg); border:1px solid var(--accent); color:var(--text); padding:2px 6px; border-radius:2px; font-size:12px; font-family:inherit; outline:none; min-width:0;';
+
+        // 編集確定（render なし）
+        const commit = (cancel = false) => {
+            if (editingNodeId !== task.id) return false;
+            const val = input.value.trim();
+            if (cancel || !val) {
+                if (!task.title) {
+                    state.tasks = state.tasks.filter(x => x.id !== task.id);
+                    editingNodeId = null;
+                    return false; // 削除されたので継続不可
+                }
+                editingNodeId = null;
+                return false;
+            }
+            task.title = val;
+            editingNodeId = null;
+            return true; // 内容ありで確定
+        };
+
+        // 連続入力：新規ノードを追加して編集モードへ
+        const addNextNode = (parentId) => {
+            const newTask = {
+                id: uid(), title: '', date: '', startDate: '', owner: '', status: '未着手',
+                memoId: null, wbsId: null, parentId: parentId, order: state.tasks.length
+            };
+            state.tasks.push(newTask);
+            editingNodeId = newTask.id;
+            state.selectedTaskId = newTask.id;
+        };
+
+        input.onkeydown = (e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                const ok = commit(false);
+                if (ok) {
+                    // 同階層に新規ノード
+                    addNextNode(task.parentId);
+                }
+                saveState(); renderWBS(); renderGantt();
+                if (editingNodeId) {
+                    setTimeout(() => {
+                        const ni = document.querySelector(`.wbs-node[data-tid="${editingNodeId}"] .title-edit`);
+                        if (ni) { ni.focus(); ni.scrollIntoView({ block: 'center' }); }
+                    }, 30);
+                }
+            } else if (e.key === 'Tab' && !e.shiftKey) {
+                // 子として追加
+                e.preventDefault();
+                const ok = commit(false);
+                if (ok) {
+                    addNextNode(task.id);
+                }
+                saveState(); renderWBS(); renderGantt();
+                if (editingNodeId) {
+                    setTimeout(() => {
+                        const ni = document.querySelector(`.wbs-node[data-tid="${editingNodeId}"] .title-edit`);
+                        if (ni) { ni.focus(); ni.scrollIntoView({ block: 'center' }); }
+                    }, 30);
+                }
+            } else if (e.key === 'Tab' && e.shiftKey) {
+                // 親階層に新規追加
+                e.preventDefault();
+                const ok = commit(false);
+                if (ok) {
+                    const parent = state.tasks.find(x => x.id === task.parentId);
+                    addNextNode(parent ? parent.parentId : null);
+                }
+                saveState(); renderWBS(); renderGantt();
+                if (editingNodeId) {
+                    setTimeout(() => {
+                        const ni = document.querySelector(`.wbs-node[data-tid="${editingNodeId}"] .title-edit`);
+                        if (ni) { ni.focus(); ni.scrollIntoView({ block: 'center' }); }
+                    }, 30);
+                }
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                commit(true);
+                saveState(); renderWBS(); renderGantt();
+            }
+        };
+        input.onblur = () => {
+            // フォーカスが他の.title-editに移動した場合は処理しない（連続入力で再描画されるため）
+            setTimeout(() => {
+                if (editingNodeId === task.id) {
+                    commit(false);
+                    saveState(); renderWBS(); renderGantt();
+                }
+            }, 50);
+        };
+        input.onclick = (e) => e.stopPropagation();
+        node.append(toggle, input);
+        parentEl.appendChild(node);
+        children.sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(c => renderWBSNode(c, depth + 1, parentEl));
+        return;
+    }
+
+    const title = document.createElement('span');
+    title.className = 'title';
+    title.textContent = task.title || '(無題)';
+
+    // 期間情報
+    const meta = document.createElement('span');
+    meta.className = 'meta-info';
+    let metaText = '';
+    if (isParent) {
+        const ad = collectAllDates(task.id);
+        const s = ad.starts.sort()[0];
+        const e = ad.ends.sort().pop();
+        if (s || e) metaText = `${s || '?'}〜${e || '?'}`;
+    } else {
+        if (task.startDate || task.date) {
+            metaText = `${task.startDate || '?'}〜${task.date || '?'}`;
+        }
+    }
+    if (task.owner) metaText += ' @' + task.owner;
+    meta.textContent = metaText;
+
+    const controls = document.createElement('div');
+    controls.className = 'controls';
+
+    const indentBtn = document.createElement('button');
+    indentBtn.textContent = '→'; indentBtn.title = 'インデント（子化）';
+    indentBtn.onclick = (e) => { e.stopPropagation(); wbsIndent(task.id); };
+
+    const outdentBtn = document.createElement('button');
+    outdentBtn.textContent = '←'; outdentBtn.title = 'アウトデント';
+    outdentBtn.onclick = (e) => { e.stopPropagation(); wbsOutdent(task.id); };
+
+    const upBtn = document.createElement('button');
+    upBtn.textContent = '↑';
+    upBtn.onclick = (e) => { e.stopPropagation(); wbsMove(task.id, -1); };
+
+    const downBtn = document.createElement('button');
+    downBtn.textContent = '↓';
+    downBtn.onclick = (e) => { e.stopPropagation(); wbsMove(task.id, 1); };
+
+    const addChildBtn = document.createElement('button');
+    addChildBtn.textContent = '+子'; addChildBtn.title = '子タスク追加';
+    addChildBtn.onclick = (e) => { e.stopPropagation(); addWBSChild(task.id); };
+
+    const editBtn = document.createElement('button');
+    editBtn.textContent = '✏'; editBtn.title = '詳細編集（日付/担当）';
+    editBtn.onclick = (e) => { e.stopPropagation(); openWBSPopup(task.id); };
+
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '🗑'; delBtn.title = '削除';
+    delBtn.style.color = 'var(--danger)';
+    delBtn.onclick = (e) => { e.stopPropagation(); deleteWBSTask(task.id); };
+
+    controls.append(indentBtn, outdentBtn, upBtn, downBtn, addChildBtn, editBtn, delBtn);
+
+    node.append(toggle, title, meta, controls);
+    node.onclick = () => {
+        state.selectedTaskId = task.id;
+        renderWBS(); renderGantt();
+    };
+    // タイトルダブルクリックでインライン編集
+    title.ondblclick = (e) => {
+        e.stopPropagation();
+        editingNodeId = task.id;
+        renderWBS();
+        setTimeout(() => {
+            const input = document.querySelector(`.wbs-node[data-tid="${task.id}"] .title-edit`);
+            if (input) { input.focus(); input.select(); }
+        }, 30);
+    };
+    parentEl.appendChild(node);
+
+    // ドラッグ&ドロップ
+    node.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', task.id);
+        node.classList.add('dragging');
+    });
+    node.addEventListener('dragend', () => node.classList.remove('dragging'));
+    node.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        node.classList.add('drag-over');
+    });
+    node.addEventListener('dragleave', () => node.classList.remove('drag-over'));
+    node.addEventListener('drop', (e) => {
+        e.preventDefault();
+        node.classList.remove('drag-over');
+        const draggedId = e.dataTransfer.getData('text/plain');
+        if (draggedId === task.id) return;
+        const dragged = state.tasks.find(t => t.id === draggedId);
+        if (dragged) {
+            if (isAncestor(draggedId, task.id)) { toast('循環参照になります', 'error'); return; }
+            dragged.parentId = task.id;
+            saveState(); renderWBS(); renderGantt();
+        }
+    });
+
+    children.sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(c => renderWBSNode(c, depth + 1, parentEl));
+}
+function isAncestor(maybeAncestorId, descendantId) {
+    let cur = state.tasks.find(t => t.id === descendantId);
+    while (cur && cur.parentId) {
+        if (cur.parentId === maybeAncestorId) return true;
+        cur = state.tasks.find(t => t.id === cur.parentId);
+    }
+    return false;
+}
+function wbsIndent(taskId) {
+    const t = state.tasks.find(x => x.id === taskId);
+    if (!t) return;
+    const siblings = state.tasks.filter(x => x.parentId === t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const idx = siblings.findIndex(s => s.id === taskId);
+    if (idx <= 0) { toast('インデントできません', 'warning'); return; }
+    t.parentId = siblings[idx - 1].id;
+    saveState(); renderWBS(); renderGantt();
+}
+function wbsOutdent(taskId) {
+    const t = state.tasks.find(x => x.id === taskId);
+    if (!t || !t.parentId) { toast('これ以上アウトデントできません', 'warning'); return; }
+    const parent = state.tasks.find(x => x.id === t.parentId);
+    t.parentId = parent ? parent.parentId : null;
+    saveState(); renderWBS(); renderGantt();
+}
+function wbsMove(taskId, dir) {
+    const t = state.tasks.find(x => x.id === taskId);
+    if (!t) return;
+    const siblings = state.tasks.filter(x => x.parentId === t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const idx = siblings.findIndex(s => s.id === taskId);
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= siblings.length) return;
+    [siblings[idx], siblings[newIdx]] = [siblings[newIdx], siblings[idx]];
+    siblings.forEach((s, i) => s.order = i);
+    saveState(); renderWBS(); renderGantt();
+}
+function addWBSRoot() {
+    const newTask = {
+        id: uid(), title: '', date: '', startDate: '', owner: '', status: '未着手',
+        memoId: null, wbsId: null, parentId: null, order: state.tasks.length
+    };
+    state.tasks.push(newTask);
+    state.selectedTaskId = newTask.id;
+    editingNodeId = newTask.id;
+    saveState(); renderWBS(); renderGantt();
+    setTimeout(() => {
+        const input = document.querySelector(`.wbs-node[data-tid="${newTask.id}"] .title-edit`);
+        if (input) { input.focus(); input.scrollIntoView({ block: 'center' }); }
+    }, 30);
+}
+function addWBSChild(parentId) {
+    const newTask = {
+        id: uid(), title: '', date: '', startDate: '', owner: '', status: '未着手',
+        memoId: null, wbsId: null, parentId, order: state.tasks.length
+    };
+    state.tasks.push(newTask);
+    state.selectedTaskId = newTask.id;
+    editingNodeId = newTask.id;
+    saveState(); renderWBS(); renderGantt();
+    setTimeout(() => {
+        const input = document.querySelector(`.wbs-node[data-tid="${newTask.id}"] .title-edit`);
+        if (input) { input.focus(); input.scrollIntoView({ block: 'center' }); }
+    }, 30);
+}
+function openWBSPopup(taskId) {
+    const t = state.tasks.find(x => x.id === taskId);
+    if (!t) return;
+    state.editingWbsId = taskId;
+    document.getElementById('wbs-pop-title').value = t.title || '';
+    document.getElementById('wbs-pop-parent').innerHTML = buildParentTaskOptions(taskId, t.parentId);
+    document.getElementById('wbs-pop-start').value = t.startDate || '';
+    document.getElementById('wbs-pop-end').value = t.date || '';
+    document.getElementById('wbs-pop-owner').value = t.owner || '';
+    document.getElementById('wbs-pop-status').value = t.status || '未着手';
+    document.getElementById('wbs-popup').classList.add('active');
+    setTimeout(() => document.getElementById('wbs-pop-title').focus(), 50);
+}
+function closeWBSPopup() {
+    document.getElementById('wbs-popup').classList.remove('active');
+    state.editingWbsId = null;
+}
+function saveWBSFromPopup() {
+    const t = state.tasks.find(x => x.id === state.editingWbsId);
+    if (!t) return;
+    const newParentId = document.getElementById('wbs-pop-parent').value || null;
+    // 循環チェック
+    if (newParentId && (newParentId === t.id || isAncestor(t.id, newParentId))) {
+        toast('循環参照になるため設定できません', 'error'); return;
+    }
+    t.title = document.getElementById('wbs-pop-title').value;
+    t.parentId = newParentId;
+    t.startDate = document.getElementById('wbs-pop-start').value;
+    t.date = document.getElementById('wbs-pop-end').value;
+    t.owner = document.getElementById('wbs-pop-owner').value;
+    t.status = document.getElementById('wbs-pop-status').value;
+    saveState();
+    closeWBSPopup();
+    renderWBS(); renderGantt();
+    toast('WBS更新', 'success');
+}
+function deleteWBSTask(taskId) {
+    if (!confirm('このタスクとその子タスクを削除しますか？')) return;
+    const toDel = new Set([taskId]);
+    let changed = true;
+    while (changed) {
+        changed = false;
+        state.tasks.forEach(t => {
+            if (t.parentId && toDel.has(t.parentId) && !toDel.has(t.id)) { toDel.add(t.id); changed = true; }
+        });
+    }
+    state.tasks = state.tasks.filter(t => !toDel.has(t.id));
+    if (toDel.has(state.selectedTaskId)) state.selectedTaskId = null;
+    saveState();
+    renderWBS(); renderGantt();
+}
+
+// ========== ガントチャート ==========
+function setGanttScale(scale) {
+    state.ganttScale = scale;
+    document.querySelectorAll('.gantt-scale-btn').forEach(b => b.classList.toggle('active', b.dataset.scale === scale));
+    renderGantt();
+}
+function renderGantt() {
+    const container = document.getElementById('gantt-container');
+    container.innerHTML = '';
+    // フラット化（階層順）
+    const flat = flattenWBS();
+    if (flat.length === 0) {
+        container.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-dim);">タスクがありません</div>';
+        return;
+    }
+
+    // 親タスクの期間を子から自動算出
+    flat.forEach(item => {
+        const t = item.task;
+        const children = state.tasks.filter(x => x.parentId === t.id);
+        if (children.length > 0) {
+            const allDates = collectAllDates(t.id);
+            if (allDates.starts.length) item._derivedStart = allDates.starts.sort()[0];
+            if (allDates.ends.length) item._derivedEnd = allDates.ends.sort()[allDates.ends.length - 1];
+        } else {
+            item._derivedStart = t.startDate || t.date;
+            item._derivedEnd = t.date;
+        }
+    });
+
+    // 期間範囲を決定
+    const allDates = [];
+    flat.forEach(it => {
+        if (it._derivedStart) allDates.push(it._derivedStart);
+        if (it._derivedEnd) allDates.push(it._derivedEnd);
+    });
+    let minDate, maxDate;
+    if (allDates.length === 0) {
+        minDate = new Date(); maxDate = new Date(); maxDate.setDate(maxDate.getDate() + 30);
+    } else {
+        minDate = new Date(allDates.sort()[0]);
+        maxDate = new Date(allDates.sort()[allDates.length - 1]);
+    }
+    // 余裕パディング
+    minDate.setDate(minDate.getDate() - 3);
+    maxDate.setDate(maxDate.getDate() + 7);
+
+    // スケール設定
+    const dayWidth = state.ganttScale === 'd' ? 32 : state.ganttScale === 'w' ? 14 : 5;
+    const totalDays = Math.ceil((maxDate - minDate) / 86400000);
+    const timelineWidth = totalDays * dayWidth;
+
+    // タイムライン列のみ（タスク名は左のWBSペインで表示するため省略）
+    const timelineCol = document.createElement('div');
+    timelineCol.className = 'gantt-timeline-col';
+    timelineCol.style.width = timelineWidth + 'px';
+    timelineCol.style.minWidth = timelineWidth + 'px';
+
+    // タイムラインヘッダ
+    const timelineHead = document.createElement('div');
+    timelineHead.className = 'gantt-timeline-header';
+    const today = new Date(); today.setHours(0,0,0,0);
+    if (state.ganttScale === 'd') {
+        for (let i = 0; i < totalDays; i++) {
+            const d = new Date(minDate); d.setDate(d.getDate() + i);
+            const cell = document.createElement('div');
+            cell.className = 'gantt-time-cell';
+            cell.style.width = dayWidth + 'px';
+            const day = d.getDay();
+            if (day === 0 || day === 6) cell.classList.add('weekend');
+            if (d.getTime() === today.getTime()) cell.classList.add('today');
+            cell.textContent = d.getDate();
+            timelineHead.appendChild(cell);
+        }
+    } else if (state.ganttScale === 'w') {
+        // 週単位ヘッダ
+        let cursor = new Date(minDate);
+        while (cursor < maxDate) {
+            const weekStart = new Date(cursor);
+            const cell = document.createElement('div');
+            cell.className = 'gantt-time-cell';
+            cell.style.width = (7 * dayWidth) + 'px';
+            cell.textContent = (weekStart.getMonth() + 1) + '/' + weekStart.getDate();
+            timelineHead.appendChild(cell);
+            cursor.setDate(cursor.getDate() + 7);
+        }
+    } else {
+        // 月単位ヘッダ
+        let cursor = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+        while (cursor < maxDate) {
+            const monthStart = new Date(cursor);
+            const next = new Date(cursor); next.setMonth(next.getMonth() + 1);
+            const daysInMonth = Math.ceil((next - monthStart) / 86400000);
+            const cell = document.createElement('div');
+            cell.className = 'gantt-time-cell';
+            cell.style.width = (daysInMonth * dayWidth) + 'px';
+            cell.textContent = (monthStart.getFullYear() + '/' + (monthStart.getMonth() + 1));
+            timelineHead.appendChild(cell);
+            cursor = next;
+        }
+    }
+    timelineCol.appendChild(timelineHead);
+
+    // タスク行（バー）
+    const rowsArea = document.createElement('div');
+    rowsArea.className = 'gantt-rows-area';
+    rowsArea.style.position = 'relative';
+
+    flat.forEach((it, idx) => {
+        const row = document.createElement('div');
+        row.className = 'gantt-row' + (it.isParent ? ' parent' : '');
+        if (state.selectedTaskId === it.task.id) {
+            row.style.background = 'rgba(74,158,255,0.15)';
+        }
+        rowsArea.appendChild(row);
+        if (!it._derivedStart || !it._derivedEnd) return;
+        const startDate = new Date(it._derivedStart);
+        const endDate = new Date(it._derivedEnd);
+        const startOffset = Math.floor((startDate - minDate) / 86400000);
+        const duration = Math.max(1, Math.ceil((endDate - startDate) / 86400000) + 1);
+        const bar = document.createElement('div');
+        bar.className = 'gantt-bar' + (it.isParent ? ' parent' : '') + (it.task.status === '完了' ? ' completed' : '');
+        bar.style.left = (startOffset * dayWidth) + 'px';
+        bar.style.width = (duration * dayWidth) + 'px';
+        bar.textContent = it.task.title || '';
+        bar.title = `${it.task.title}\n${it._derivedStart} 〜 ${it._derivedEnd}\nステータス: ${it.task.status}`;
+        if (state.selectedTaskId === it.task.id) {
+            bar.style.boxShadow = '0 0 0 2px var(--accent), 0 0 8px var(--accent)';
+        }
+        bar.onclick = (e) => {
+            e.stopPropagation();
+            state.selectedTaskId = it.task.id;
+            renderWBS(); renderGantt();
+        };
+        bar.ondblclick = (e) => {
+            e.stopPropagation();
+            openWBSPopup(it.task.id);
+        };
+        row.appendChild(bar);
+    });
+
+    // 今日ライン
+    const todayOffset = Math.floor((today - minDate) / 86400000);
+    if (todayOffset >= 0 && todayOffset <= totalDays) {
+        const line = document.createElement('div');
+        line.style.position = 'absolute';
+        line.style.left = (todayOffset * dayWidth) + 'px';
+        line.style.top = '0'; line.style.bottom = '0';
+        line.style.width = '2px';
+        line.style.background = 'rgba(74,158,255,0.5)';
+        line.style.zIndex = '3';
+        rowsArea.appendChild(line);
+    }
+    timelineCol.appendChild(rowsArea);
+    container.appendChild(timelineCol);
+}
+function collectAllDates(taskId) {
+    const result = { starts: [], ends: [] };
+    const t = state.tasks.find(x => x.id === taskId);
+    if (!t) return result;
+    const children = state.tasks.filter(x => x.parentId === taskId);
+    if (children.length === 0) {
+        if (t.startDate) result.starts.push(t.startDate);
+        else if (t.date) result.starts.push(t.date);
+        if (t.date) result.ends.push(t.date);
+    } else {
+        children.forEach(c => {
+            const sub = collectAllDates(c.id);
+            result.starts.push(...sub.starts);
+            result.ends.push(...sub.ends);
+        });
+    }
+    return result;
+}
+function flattenWBS() {
+    const result = [];
+    const roots = state.tasks.filter(t => !t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    function recurse(task, depth) {
+        const children = state.tasks.filter(t => t.parentId === task.id);
+        result.push({ task, depth, isParent: children.length > 0 });
+        children.sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(c => recurse(c, depth + 1));
+    }
+    roots.forEach(r => recurse(r, 0));
+    return result;
+}
+
+// ========== PowerPoint出力 ==========
+function exportToPPTX() {
+    if (typeof PptxGenJS === 'undefined') {
+        toast('PptxGenJSライブラリが読み込めていません', 'error');
+        return;
+    }
+    const flat = flattenWBS();
+    if (flat.length === 0) { toast('出力するタスクがありません', 'warning'); return; }
+    flat.forEach(it => {
+        const t = it.task;
+        const children = state.tasks.filter(x => x.parentId === t.id);
+        if (children.length > 0) {
+            const ad = collectAllDates(t.id);
+            it._derivedStart = ad.starts.sort()[0];
+            it._derivedEnd = ad.ends.sort().pop();
+        } else {
+            it._derivedStart = t.startDate || t.date;
+            it._derivedEnd = t.date;
+        }
+    });
+    const dates = [];
+    flat.forEach(it => {
+        if (it._derivedStart) dates.push(it._derivedStart);
+        if (it._derivedEnd) dates.push(it._derivedEnd);
+    });
+    if (dates.length === 0) { toast('日付が設定されていません', 'warning'); return; }
+    const minDate = new Date(dates.sort()[0]);
+    const maxDate = new Date(dates.sort()[dates.length - 1]);
+    minDate.setDate(minDate.getDate() - 3);
+    maxDate.setDate(maxDate.getDate() + 3);
+    const totalDays = Math.ceil((maxDate - minDate) / 86400000);
+
+    const pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_WIDE';
+    const slide = pptx.addSlide();
+    // タイトル
+    slide.addText('ガントチャート', { x: 0.3, y: 0.2, w: 12, h: 0.5, fontSize: 22, bold: true, color: '4a9eff' });
+    // ヘッダ列
+    const slideW = 13.33, slideH = 7.5;
+    const taskColW = 3.0;
+    const timelineX = taskColW + 0.3;
+    const timelineW = slideW - timelineX - 0.3;
+    const dayW = timelineW / totalDays;
+    const headerY = 0.85;
+    const rowH = 0.32;
+    // 時間軸ラベル（月ごと）
+    let cursor = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    while (cursor < maxDate) {
+        const offset = Math.max(0, Math.ceil((cursor - minDate) / 86400000));
+        const next = new Date(cursor); next.setMonth(next.getMonth() + 1);
+        const daysInMonth = Math.ceil((Math.min(next, maxDate) - cursor) / 86400000);
+        slide.addText(`${cursor.getFullYear()}/${cursor.getMonth() + 1}`, {
+            x: timelineX + offset * dayW, y: headerY,
+            w: daysInMonth * dayW, h: 0.3,
+            fontSize: 9, color: '666666', align: 'center', fill: 'eeeeee'
+        });
+        cursor = next;
+    }
+    // タスクごとに行
+    flat.forEach((it, idx) => {
+        const y = headerY + 0.35 + idx * rowH;
+        // タスク名
+        slide.addText('  '.repeat(it.depth) + (it.task.title || '無題'), {
+            x: 0.3, y, w: taskColW, h: rowH,
+            fontSize: 9, color: it.isParent ? '7c5cff' : '333333',
+            bold: it.isParent, align: 'left', valign: 'middle'
+        });
+        // バー
+        if (it._derivedStart && it._derivedEnd) {
+            const startOff = Math.floor((new Date(it._derivedStart) - minDate) / 86400000);
+            const dur = Math.max(1, Math.ceil((new Date(it._derivedEnd) - new Date(it._derivedStart)) / 86400000) + 1);
+            const barColor = it.task.status === '完了' ? '4caf50' : (it.isParent ? '7c5cff' : '4a9eff');
+            slide.addShape('rect', {
+                x: timelineX + startOff * dayW,
+                y: y + 0.05,
+                w: dur * dayW,
+                h: rowH - 0.1,
+                fill: { color: barColor },
+                line: { color: '333333', width: 0.5 }
+            });
+            slide.addText(it.task.title || '', {
+                x: timelineX + startOff * dayW,
+                y: y + 0.05,
+                w: dur * dayW,
+                h: rowH - 0.1,
+                fontSize: 8, color: 'ffffff', align: 'left', valign: 'middle'
+            });
+        }
+    });
+
+    pptx.writeFile({ fileName: 'cockpit_gantt_' + Date.now() + '.pptx' });
+    toast('PowerPointファイルを出力しました', 'success');
+}
+
+async function manualSave() {
+    if (!workFolderHandle) {
+        // ワークフォルダ未設定なら設定を促す
+        if (confirm('ワークフォルダが未設定です。設定しますか？\n（OK=設定 / キャンセル=従来のダウンロード保存）')) {
+            await selectWorkFolder();
+            return;
+        }
+        // 従来のダウンロード
+        await exportAllData();
+        return;
+    }
+    // ワークフォルダに即座に保存
+    const prev = autoSaveEnabled;
+    autoSaveEnabled = true;
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    await autoSaveToWorkFolder();
+    autoSaveEnabled = prev;
+    if (!prev) updateWorkFolderUI();
+}
+
+// ========== 設定 ==========
+function toggleAutoSave(enabled) {
+    autoSaveEnabled = enabled && !!workFolderHandle;
+    state.settings.autoSave = autoSaveEnabled;
+    saveState();
+    updateWorkFolderUI();
+    if (autoSaveEnabled) {
+        toast('自動保存を有効化', 'success');
+        scheduleAutoSave();
+    } else {
+        toast('自動保存を無効化', 'warning');
+    }
+}
+function openSettings() {
+    document.getElementById('setting-indent').value = state.settings.indent || 4;
+    document.getElementById('setting-font-size').value = state.settings.editorFontSize || 13;
+    document.getElementById('setting-memo-name').value = state.settings.memoNameTemplate || DEFAULT_MEMO_NAME_TEMPLATE;
+    document.getElementById('setting-memo-suffix').value = state.settings.memoSuffixTemplate || DEFAULT_MEMO_SUFFIX_TEMPLATE;
+    document.getElementById('setting-date-format').value = state.settings.dateFormat || DEFAULT_DATE_FORMAT;
+    document.getElementById('setting-datetime-format').value = state.settings.dateTimeFormat || DEFAULT_DATETIME_FORMAT;
+    // マイク選択肢の初期化（権限なしでも保存済みdeviceIdを表示）
+    const micSel = document.getElementById('setting-mic-device');
+    if (micSel) {
+        if (state.settings.micDeviceId && !Array.from(micSel.options).find(o => o.value === state.settings.micDeviceId)) {
+            const opt = document.createElement('option');
+            opt.value = state.settings.micDeviceId;
+            opt.textContent = '保存済みマイク (一覧更新で名称表示)';
+            opt.selected = true;
+            micSel.appendChild(opt);
+        }
+        micSel.value = state.settings.micDeviceId || '';
+    }
+    updateMemoTemplatePreview();
+    updateDatePreview();
+    updateWorkFolderUI();
+    document.getElementById('settings-popup').classList.add('active');
+    document.getElementById('setting-memo-name').oninput = updateMemoTemplatePreview;
+    document.getElementById('setting-memo-suffix').oninput = updateMemoTemplatePreview;
+    document.getElementById('setting-date-format').oninput = updateDatePreview;
+    document.getElementById('setting-datetime-format').oninput = updateDatePreview;
+}
+function updateDatePreview() {
+    const dF = document.getElementById('setting-date-format').value || DEFAULT_DATE_FORMAT;
+    const dtF = document.getElementById('setting-datetime-format').value || DEFAULT_DATETIME_FORMAT;
+    document.getElementById('date-preview').textContent = formatTemplate(dF);
+    document.getElementById('datetime-preview').textContent = formatTemplate(dtF);
+}
+function updateMemoTemplatePreview() {
+    const nameTmpl = document.getElementById('setting-memo-name').value || DEFAULT_MEMO_NAME_TEMPLATE;
+    const sufTmpl = document.getElementById('setting-memo-suffix').value || DEFAULT_MEMO_SUFFIX_TEMPLATE;
+    document.getElementById('memo-name-preview').textContent = formatTemplate(nameTmpl);
+    document.getElementById('memo-suffix-preview').textContent = '例：会議メモ' + formatTemplate(sufTmpl);
+}
+function saveSettings() {
+    state.settings.indent = parseInt(document.getElementById('setting-indent').value) || 4;
+    state.settings.editorFontSize = Math.max(10, Math.min(32, parseInt(document.getElementById('setting-font-size').value) || 13));
+    state.settings.memoNameTemplate = document.getElementById('setting-memo-name').value.trim() || DEFAULT_MEMO_NAME_TEMPLATE;
+    state.settings.memoSuffixTemplate = document.getElementById('setting-memo-suffix').value.trim() || DEFAULT_MEMO_SUFFIX_TEMPLATE;
+    state.settings.dateFormat = document.getElementById('setting-date-format').value.trim() || DEFAULT_DATE_FORMAT;
+    state.settings.dateTimeFormat = document.getElementById('setting-datetime-format').value.trim() || DEFAULT_DATETIME_FORMAT;
+    state.settings.micDeviceId = document.getElementById('setting-mic-device')?.value || '';
+    applyEditorSettings();
+    saveState();
+    document.getElementById('settings-popup').classList.remove('active');
+    toast('設定を保存しました', 'success');
+}
+function applyEditorSettings() {
+    document.documentElement.style.setProperty('--indent-size', state.settings.indent || 4);
+    document.documentElement.style.setProperty('--editor-font-size', (state.settings.editorFontSize || 13) + 'px');
+}
+async function exportAllData() {
+    const data = JSON.stringify({
+        folders: state.folders,
+        memos: state.memos,
+        tasks: state.tasks,
+        settings: state.settings,
+    }, null, 2);
+    if (workFolderHandle) {
+        const ok = await writeToWorkFolder('cockpit_data.json', data);
+        if (ok) { toast('ワークフォルダにバックアップしました', 'success'); return; }
+    }
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cockpit_backup_' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('エクスポート完了', 'success');
+}
+function importAllData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        try {
+            const data = JSON.parse(reader.result);
+            if (!confirm('既存データを上書きしますか？')) return;
+            state.folders = data.folders || [];
+            state.memos = data.memos || [];
+            state.tasks = data.tasks || [];
+            state.settings = data.settings || { indent: 4 };
+            saveState();
+            renderAll();
+            toast('インポート完了', 'success');
+        } catch (err) { toast('インポート失敗: ' + err.message, 'error'); }
+    };
+    reader.readAsText(file);
+}
+function resetAllData() {
+    if (!confirm('全データを削除します。よろしいですか？')) return;
+    if (!confirm('本当によろしいですか？この操作は取り消せません。')) return;
+    localStorage.removeItem(STORE_KEY);
+    location.reload();
+}
+
+// ========== 全体描画 ==========
+function renderAll() {
+    applyEditorSettings();
+    renderFolderTree(); renderMemoList(); renderTagFilter(); renderRecordings();
+    updateWorkFolderUI();
+    if (state.memos.length > 0 && state.selectedMemoId) {
+        const m = state.memos.find(x => x.id === state.selectedMemoId);
+        if (m) loadMemoIntoEditor(m);
+    }
+}
+
+// ========== 起動 ==========
+window.addEventListener('DOMContentLoaded', async () => {
+    loadState();
+    if (!state.selectedFolderId && state.folders.length) state.selectedFolderId = state.folders[0].id;
+
+    // ワークフォルダハンドルを復元（permission取得は最初の使用時）
+    workFolderHandle = await fsLoadHandle('workFolder');
+    if (workFolderHandle) {
+        // フォルダが設定されていれば自動保存もデフォルトON
+        autoSaveEnabled = state.settings.autoSave !== false;
+    }
+
+    renderAll();
+
+    // 環境チェック
+    if (location.protocol === 'file:') {
+        console.warn('[COCKPIT] file:// で開かれています。録音・画面キャプチャ等のAPIは制限されます。');
+        setTimeout(() => {
+            toast('⚠ file://で開かれています。録音にはローカルHTTPサーバ経由でアクセスしてください', 'warning');
+        }, 800);
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.warn('[COCKPIT] mediaDevices API 未対応');
+    }
+
+    // ESCでポップアップクローズ / Ctrl+S で手動保存
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.popup-overlay.active').forEach(p => p.classList.remove('active'));
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            manualSave();
+        }
+    });
+
+    // WBS/ガントの左右スプリッタ
+    const splitter = document.getElementById('splitter');
+    const wbsPane = document.getElementById('wbs-pane');
+    if (splitter && wbsPane) {
+        let isDragging = false;
+        splitter.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            splitter.classList.add('dragging');
+            e.preventDefault();
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const containerRect = wbsPane.parentElement.getBoundingClientRect();
+            const newW = e.clientX - containerRect.left;
+            const minW = 280;
+            const maxW = containerRect.width - 280;
+            if (newW >= minW && newW <= maxW) {
+                wbsPane.style.width = newW + 'px';
+            }
+        });
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                splitter.classList.remove('dragging');
+            }
+        });
+    }
+
+    // WBSとガントの縦スクロール同期
+    const wbsTree = document.getElementById('wbs-tree');
+    const ganttContainer = document.getElementById('gantt-container');
+    if (wbsTree && ganttContainer) {
+        let syncing = false;
+        wbsTree.addEventListener('scroll', () => {
+            if (syncing) return;
+            syncing = true;
+            ganttContainer.scrollTop = wbsTree.scrollTop;
+            requestAnimationFrame(() => syncing = false);
+        });
+        ganttContainer.addEventListener('scroll', () => {
+            if (syncing) return;
+            syncing = true;
+            wbsTree.scrollTop = ganttContainer.scrollTop;
+            requestAnimationFrame(() => syncing = false);
+        });
+    }
+
+    // 表ツールバー：右クリック / 長押しで表示
+    const edEl = document.getElementById('editor');
+    if (edEl) {
+        // 右クリック（PC）
+        edEl.addEventListener('contextmenu', (e) => {
+            const cell = e.target.closest('td, th');
+            if (!cell) {
+                hideTableToolbar();
+                return; // 通常のコンテキストメニュー
+            }
+            e.preventDefault();
+            currentCell = cell;
+            currentTable = cell.closest('table');
+            // selectionも合わせる
+            const range = document.createRange();
+            range.selectNodeContents(cell);
+            range.collapse(false);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            showTableToolbarAt(e.clientX, e.clientY);
+        });
+        // 長押し（モバイル）
+        let longPressTimer = null;
+        let longPressStartTouch = null;
+        edEl.addEventListener('touchstart', (e) => {
+            const cell = e.target.closest && e.target.closest('td, th');
+            if (!cell) return;
+            const t = e.touches[0];
+            longPressStartTouch = { x: t.clientX, y: t.clientY };
+            longPressTimer = setTimeout(() => {
+                currentCell = cell;
+                currentTable = cell.closest('table');
+                showTableToolbarAt(longPressStartTouch.x, longPressStartTouch.y);
+                if (navigator.vibrate) navigator.vibrate(40);
+                longPressTimer = null;
+            }, 500);
+        }, { passive: true });
+        edEl.addEventListener('touchmove', (e) => {
+            if (!longPressStartTouch) return;
+            const t = e.touches[0];
+            const dx = t.clientX - longPressStartTouch.x;
+            const dy = t.clientY - longPressStartTouch.y;
+            if (Math.sqrt(dx*dx + dy*dy) > 8) {
+                if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                longPressStartTouch = null;
+            }
+        }, { passive: true });
+        edEl.addEventListener('touchend', () => {
+            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+            longPressStartTouch = null;
+        });
+        edEl.addEventListener('scroll', () => { hideTableToolbar(); });
+    }
+    window.addEventListener('scroll', () => { hideTableToolbar(); });
+    window.addEventListener('resize', () => { hideTableToolbar(); });
+
+    // ツールバー外をクリックしたら非表示
+    document.addEventListener('mousedown', (e) => {
+        const tb = document.getElementById('table-toolbar');
+        if (!tb) return;
+        if (tb.contains(e.target)) return;
+        hideTableToolbar();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') hideTableToolbar();
+    });
+
+    // セルのリサイズ（列幅・行高をドラッグで変更）
+    setupCellResize();
+});
+</script>
+
+</body>
+</html>
