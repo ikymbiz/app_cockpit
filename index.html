@@ -994,52 +994,6 @@ textarea.structured-cell {
 .shortcut-grid { display:grid; grid-template-columns: 1fr 140px; gap:6px; align-items:center; font-size:12px; }
 .shortcut-grid input { font-family:Consolas, monospace; }
 
-
-
-/* ====== 修正: WBS/ToDo入力欄を本物のtable + textareaにする ====== */
-.structured-editor {
-    width:100%; max-height:420px; overflow:auto; box-sizing:border-box;
-    background:var(--bg); color:var(--text); border:1px solid var(--border);
-    border-radius:4px; font-family:Consolas, 'Yu Gothic UI', monospace; font-size:12px;
-}
-.structured-table {
-    width:100%; border-collapse:collapse; table-layout:fixed;
-}
-.structured-table th,
-.structured-table td {
-    border-right:1px solid var(--border); border-bottom:1px solid var(--border);
-    padding:0; vertical-align:top; background:transparent;
-}
-.structured-table tr:last-child td { border-bottom:none; }
-.structured-table th:last-child,
-.structured-table td:last-child { border-right:none; }
-.structured-table thead th {
-    position:sticky; top:0; z-index:2; background:var(--panel); color:var(--text-dim); font-weight:600;
-}
-.structured-input {
-    display:block; width:100%; min-height:34px; height:34px; box-sizing:border-box;
-    border:0; outline:none; padding:7px 8px; resize:none; overflow:hidden;
-    background:transparent; color:var(--text); font:inherit; line-height:1.55;
-    white-space:pre-wrap; overflow-wrap:anywhere; cursor:text; caret-color:var(--text);
-}
-.structured-input:focus {
-    background:rgba(74,158,255,0.14); box-shadow:inset 0 0 0 1px var(--accent);
-}
-.structured-input::placeholder { color:var(--text-dim); font-style:italic; opacity:1; }
-.todo-structured-editor .todo-table col:first-child { width:26%; }
-.todo-structured-editor .todo-table col { width:12%; }
-.wbs-structured-editor .wbs-table col:nth-child(1) { width:48%; }
-.wbs-structured-editor .wbs-table col:nth-child(2) { width:18%; }
-.wbs-structured-editor .wbs-table col:nth-child(3) { width:17%; }
-.wbs-structured-editor .wbs-table col:nth-child(4) { width:17%; }
-.wbs-structured-editor .structured-row[data-level="0"] .wbs-title-input { padding-left:8px; }
-.wbs-structured-editor .structured-row[data-level="1"] .wbs-title-input { padding-left:32px; }
-.wbs-structured-editor .structured-row[data-level="2"] .wbs-title-input { padding-left:56px; }
-.wbs-structured-editor .structured-row[data-level="3"] .wbs-title-input { padding-left:80px; }
-.wbs-structured-editor .structured-row[data-level="4"] .wbs-title-input { padding-left:104px; }
-.wbs-structured-editor .structured-row[data-level="5"] .wbs-title-input { padding-left:128px; }
-.wbs-structured-editor .structured-row[data-level="6"] .wbs-title-input { padding-left:152px; border-left:2px solid var(--warning); }
-
 </style>
 </head>
 <body>
@@ -4117,26 +4071,18 @@ function updateStats() {
 
 
 
-
-function getCellInput(el) {
-    if (!el) return null;
-    if (el.matches && el.matches('textarea, input')) return el;
-    return el.querySelector ? el.querySelector('textarea, input, .structured-input') : null;
-}
 function getCellPlainText(cell) {
     if (!cell) return '';
-    const input = getCellInput(cell);
-    const raw = input ? input.value : (cell.textContent || '');
+    const raw = (cell.tagName === 'TEXTAREA' || cell.tagName === 'INPUT') ? cell.value : (cell.textContent || '');
     return String(raw).replace(/\u00a0/g, ' ').replace(/\r?\n/g, ' ').trim();
 }
 function setCellPlainText(cell, value) {
     const v = value || '';
     if (!cell) return;
-    const input = getCellInput(cell);
-    if (input) {
-        input.value = v;
-        input.classList.toggle('placeholder', !input.value);
-        autoGrowStructuredCell(input);
+    if (cell.tagName === 'TEXTAREA' || cell.tagName === 'INPUT') {
+        cell.value = v;
+        cell.classList.toggle('placeholder', !cell.value);
+        autoGrowStructuredCell(cell);
     } else {
         cell.textContent = v;
         cell.classList.toggle('placeholder', !cell.textContent);
@@ -4148,85 +4094,88 @@ function autoGrowTextarea(el) {
     el.style.height = Math.max(28, el.scrollHeight) + 'px';
 }
 function autoGrowStructuredCell(cell) {
-    const input = getCellInput(cell);
-    if (!input || input.tagName !== 'TEXTAREA') return;
-    input.style.height = '34px';
-    input.style.height = Math.max(34, input.scrollHeight) + 'px';
+    if (!cell || cell.tagName !== 'TEXTAREA') return;
+    cell.style.height = '32px';
+    cell.style.height = Math.max(32, cell.scrollHeight) + 'px';
 }
 function placeCaretInEditableCell(cell, atEnd = true) {
-    const input = getCellInput(cell);
-    if (!input) return;
-    const pos = atEnd ? input.value.length : 0;
-    try { input.setSelectionRange(pos, pos); } catch (e) {}
+    if (!cell) return;
+    if (cell.tagName === 'TEXTAREA' || cell.tagName === 'INPUT') {
+        const pos = atEnd ? cell.value.length : 0;
+        try { cell.setSelectionRange(pos, pos); } catch (e) {}
+        return;
+    }
+    if (cell.getAttribute('contenteditable') === 'false') return;
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    range.collapse(!atEnd);
+    const sel = window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    sel.addRange(range);
 }
 function focusEditableCell(cell, atEnd = true) {
-    const input = getCellInput(cell);
-    if (!input) return;
-    if (!input.hasAttribute('tabindex')) input.tabIndex = 0;
-    try { input.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
-    try { input.focus({ preventScroll: true }); } catch (e) { try { input.focus(); } catch (ignore) {} }
-    placeCaretInEditableCell(input, atEnd);
+    if (!cell) return;
+    if (!cell.hasAttribute('tabindex')) cell.tabIndex = 0;
+    try { cell.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
+    try { cell.focus({ preventScroll: true }); } catch (e) { try { cell.focus(); } catch (ignore) {} }
+    placeCaretInEditableCell(cell, atEnd);
 }
 function queueFocusEditableCell(cell, atEnd = true) {
-    const input = getCellInput(cell);
-    if (!input) return;
-    focusEditableCell(input, atEnd);
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => focusEditableCell(input, atEnd));
-    setTimeout(() => focusEditableCell(input, atEnd), 30);
-    setTimeout(() => focusEditableCell(input, atEnd), 120);
+    if (!cell) return;
+    focusEditableCell(cell, atEnd);
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => focusEditableCell(cell, atEnd));
+    setTimeout(() => focusEditableCell(cell, atEnd), 30);
+    setTimeout(() => focusEditableCell(cell, atEnd), 120);
 }
 function isCaretAtCellStart(cell) {
-    const input = getCellInput(cell);
-    if (!input) return false;
-    return (input.selectionStart || 0) === 0;
+    if (!cell) return false;
+    if (cell.tagName === 'TEXTAREA' || cell.tagName === 'INPUT') return (cell.selectionStart || 0) === 0;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !cell.contains(sel.anchorNode)) return false;
+    const range = sel.getRangeAt(0).cloneRange();
+    const before = range.cloneRange();
+    before.selectNodeContents(cell);
+    before.setEnd(range.startContainer, range.startOffset);
+    return before.toString().length === 0;
 }
 function makeStructuredCell(text, className, placeholder, editable = true) {
-    const input = editable ? document.createElement('textarea') : document.createElement('div');
-    input.className = 'structured-input' + (className ? ' ' + className.replace(/-cell\b/g, '-input') : '');
-    input.spellcheck = false;
-    input.tabIndex = editable ? 0 : -1;
+    const cell = editable ? document.createElement('textarea') : document.createElement('div');
+    cell.className = 'structured-cell' + (className ? ' ' + className : '');
+    cell.spellcheck = false;
+    cell.tabIndex = editable ? 0 : -1;
     if (placeholder) {
-        input.dataset.placeholder = placeholder;
-        if (editable) input.placeholder = placeholder;
+        cell.dataset.placeholder = placeholder;
+        if (editable) cell.placeholder = placeholder;
     }
     if (editable) {
-        input.rows = 1;
-        input.setAttribute('role', 'textbox');
-        input.setAttribute('aria-label', placeholder || '入力セル');
-        input.addEventListener('focus', () => autoGrowStructuredCell(input));
-        input.addEventListener('click', () => placeCaretInEditableCell(input, true));
-        input.addEventListener('input', () => {
-            input.classList.toggle('placeholder', !input.value);
-            autoGrowStructuredCell(input);
+        cell.rows = 1;
+        cell.setAttribute('role', 'textbox');
+        cell.setAttribute('aria-label', placeholder || '入力セル');
+        cell.addEventListener('focus', () => {
+            placeCaretInEditableCell(cell, true);
+            autoGrowStructuredCell(cell);
+        });
+        cell.addEventListener('click', () => placeCaretInEditableCell(cell, true));
+    }
+    setCellPlainText(cell, text || '');
+    if (editable) {
+        cell.addEventListener('input', () => {
+            cell.classList.toggle('placeholder', !cell.value);
+            autoGrowStructuredCell(cell);
             syncTextareasFromStructuredEditors(false);
         });
     }
-    setCellPlainText(input, text || '');
-    return input;
+    return cell;
 }
 function makeStructuredRow(kind, cells, level = 0, isHeader = false) {
-    const row = document.createElement('tr');
+    const row = document.createElement('div');
     row.className = 'structured-row' + (isHeader ? ' header' : '');
     row.dataset.kind = kind;
     row.dataset.level = String(Math.max(0, Math.min(MAX_WBS_LEVEL - 1, level || 0)));
-    cells.forEach(c => {
-        const wrapper = document.createElement(isHeader ? 'th' : 'td');
-        wrapper.className = 'structured-cell';
-        wrapper.appendChild(c);
-        row.appendChild(wrapper);
-    });
+    row.style.setProperty('--wbs-level', row.dataset.level);
+    cells.forEach(c => row.appendChild(c));
     return row;
-}
-function getStructuredRows(editor, includeHeader = true) {
-    if (!editor) return [];
-    const selector = includeHeader ? '.structured-row' : '.structured-row:not(.header)';
-    return Array.from(editor.querySelectorAll(selector));
-}
-function getStructuredInputs(row) {
-    return row ? Array.from(row.querySelectorAll('.structured-input')) : [];
-}
-function getStructuredBody(editor) {
-    return editor ? editor.querySelector('tbody') : null;
 }
 function todoColumnGridTemplate(columns) {
     return columns.map((c, i) => i === 0 ? 'minmax(260px,1.5fr)' : 'minmax(120px,1fr)').join(' ');
@@ -4236,7 +4185,7 @@ function columnsFromTodoEditorHeader() {
     const header = editor ? editor.querySelector('.structured-row.header') : null;
     if (!header) return state.settings.todoColumns || DEFAULT_TODO_COLUMNS;
     const oldCols = state.settings.todoColumns || DEFAULT_TODO_COLUMNS;
-    return normalizeTodoColumns(getStructuredInputs(header).map((h, i) => {
+    return normalizeTodoColumns(Array.from(header.children).map((h, i) => {
         const label = getCellPlainText(h) || '列';
         const found = oldCols.find(c => c.label === label) || DEFAULT_TODO_COLUMNS.find(c => c.label === label);
         return found ? Object.assign({}, found, { label }) : { key: 'custom_' + label.replace(/\W/g, '_') + '_' + i, label, type: 'text' };
@@ -4253,18 +4202,9 @@ function renderTodoStructuredEditorFromText(text) {
         const found = cols.find(c => c.label === label) || DEFAULT_TODO_COLUMNS.find(c => c.label === label);
         return found ? Object.assign({}, found, { label }) : { key: 'custom_' + String(label || '列').replace(/\W/g, '_') + '_' + i, label: label || '列', type: 'text' };
     }));
+    editor.style.setProperty('--todo-columns', todoColumnGridTemplate(normalizedCols));
     editor.innerHTML = '';
-    const table = document.createElement('table');
-    table.className = 'structured-table todo-table';
-    const colgroup = document.createElement('colgroup');
-    normalizedCols.forEach(() => colgroup.appendChild(document.createElement('col')));
-    const thead = document.createElement('thead');
-    const tbody = document.createElement('tbody');
-    thead.appendChild(makeStructuredRow('todo', normalizedCols.map(c => makeStructuredCell(c.label, 'todo-header-cell', '列名', true)), 0, true));
-    table.appendChild(colgroup);
-    table.appendChild(thead);
-    table.appendChild(tbody);
-    editor.appendChild(table);
+    editor.appendChild(makeStructuredRow('todo', normalizedCols.map(c => makeStructuredCell(c.label, 'todo-header-cell', '列名', true)), 0, true));
     const bodyLines = lines.slice(hasHeader ? 1 : 0).filter(l => l.trim() !== '');
     if (!bodyLines.length) bodyLines.push('');
     bodyLines.forEach(line => addTodoStructuredRow(line.split('\t'), normalizedCols, false));
@@ -4272,53 +4212,45 @@ function renderTodoStructuredEditorFromText(text) {
 function addTodoStructuredRow(values = [], columns = columnsFromTodoEditorHeader(), focus = true) {
     const editor = document.getElementById('todo-structured-editor');
     if (!editor) return null;
-    let tbody = getStructuredBody(editor);
-    if (!tbody) {
-        renderTodoStructuredEditorFromText(todoColumnsHeader() + '\n');
-        tbody = getStructuredBody(editor);
-    }
+    editor.style.setProperty('--todo-columns', todoColumnGridTemplate(columns));
     const row = makeStructuredRow('todo', columns.map((c, i) => makeStructuredCell(values[i] || '', 'todo-cell', i === 0 ? 'ここに内容を入力' : c.label, true)), 0, false);
-    tbody.appendChild(row);
-    if (focus) queueFocusEditableCell(getStructuredInputs(row)[0]);
+    editor.appendChild(row);
+    if (focus) queueFocusEditableCell(row.querySelector('.structured-cell'));
     return row;
 }
 function todoStructuredEditorToText() {
     const editor = document.getElementById('todo-structured-editor');
     if (!editor) return document.getElementById('todo-textarea')?.value || '';
-    const rows = getStructuredRows(editor, true);
-    return rows.map(row => getStructuredInputs(row).map(getCellPlainText).join('\t'))
+    const rows = Array.from(editor.querySelectorAll('.structured-row'));
+    return rows.map(row => Array.from(row.children).map(getCellPlainText).join('\t'))
         .filter((line, idx) => idx === 0 || line.replace(/\t/g, '').trim() !== '')
         .join('\n');
 }
 function handleTodoStructuredKeydown(e) {
     const editor = document.getElementById('todo-structured-editor');
     if (!editor) return;
-    const cell = e.target.closest && e.target.closest('.structured-input');
+    const cell = e.target.closest && e.target.closest('.structured-cell');
     if (!cell || !editor.contains(cell)) return;
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        const row = cell.closest('.structured-row');
-        if (!row || row.classList.contains('header')) return;
-        const cells = getStructuredInputs(row);
-        const nextRow = addTodoStructuredRow([], columnsFromTodoEditorHeader(), false);
-        row.after(nextRow);
-        const nextCells = getStructuredInputs(nextRow);
-        queueFocusEditableCell(nextCells[Math.min(cells.indexOf(cell), nextCells.length - 1)]);
+        const row = cell.parentElement;
+        if (!row.classList.contains('header')) {
+            const cells = Array.from(row.children);
+            const nextRow = addTodoStructuredRow([], columnsFromTodoEditorHeader(), false);
+            row.after(nextRow);
+            queueFocusEditableCell(nextRow.children[Math.min(cells.indexOf(cell), nextRow.children.length - 1)]);
+        }
     } else if (e.key === 'Tab') {
         e.preventDefault();
-        const rows = getStructuredRows(editor, true);
-        const row = cell.closest('.structured-row');
+        const rows = Array.from(editor.querySelectorAll('.structured-row'));
+        const row = cell.parentElement;
         const rowIndex = rows.indexOf(row);
-        const cells = getStructuredInputs(row);
-        const cellIndex = cells.indexOf(cell);
+        const cellIndex = Array.from(row.children).indexOf(cell);
         let target;
-        if (e.shiftKey) {
-            const prevRow = rows[rowIndex - 1];
-            target = cells[cellIndex - 1] || (prevRow && getStructuredInputs(prevRow).slice(-1)[0]);
-        } else {
-            const nextRow = rows[rowIndex + 1];
-            target = cells[cellIndex + 1] || (nextRow && getStructuredInputs(nextRow)[0]);
-            if (!target) target = getStructuredInputs(addTodoStructuredRow([], columnsFromTodoEditorHeader(), false))[0];
+        if (e.shiftKey) target = row.children[cellIndex - 1] || (rows[rowIndex - 1] && rows[rowIndex - 1].lastElementChild);
+        else {
+            target = row.children[cellIndex + 1] || (rows[rowIndex + 1] && rows[rowIndex + 1].firstElementChild);
+            if (!target) target = addTodoStructuredRow([], columnsFromTodoEditorHeader(), false).firstElementChild;
         }
         queueFocusEditableCell(target);
     }
@@ -4327,22 +4259,12 @@ function renderWBSStructuredEditorFromText(text) {
     const editor = document.getElementById('wbs-structured-editor');
     if (!editor) return;
     editor.innerHTML = '';
-    const table = document.createElement('table');
-    table.className = 'structured-table wbs-table';
-    const colgroup = document.createElement('colgroup');
-    for (let i = 0; i < 4; i++) colgroup.appendChild(document.createElement('col'));
-    const thead = document.createElement('thead');
-    const tbody = document.createElement('tbody');
-    thead.appendChild(makeStructuredRow('wbs', [
+    editor.appendChild(makeStructuredRow('wbs', [
         makeStructuredCell('項目名', 'wbs-header-cell', '', false),
         makeStructuredCell('期日', 'wbs-header-cell', '', false),
         makeStructuredCell('担当者', 'wbs-header-cell', '', false),
         makeStructuredCell('ステータス', 'wbs-header-cell', '', false)
     ], 0, true));
-    table.appendChild(colgroup);
-    table.appendChild(thead);
-    table.appendChild(tbody);
-    editor.appendChild(table);
     const lines = (text || '').replace(/\r\n/g, '\n').split('\n').filter(l => l.trim() !== '');
     if (!lines.length) lines.push('');
     lines.forEach(line => {
@@ -4354,11 +4276,6 @@ function renderWBSStructuredEditorFromText(text) {
 function addWBSStructuredRow(values = [], level = 0, focus = true) {
     const editor = document.getElementById('wbs-structured-editor');
     if (!editor) return null;
-    let tbody = getStructuredBody(editor);
-    if (!tbody) {
-        renderWBSStructuredEditorFromText('');
-        tbody = getStructuredBody(editor);
-    }
     const safeLevel = Math.max(0, Math.min(MAX_WBS_LEVEL - 1, level || 0));
     const row = makeStructuredRow('wbs', [
         makeStructuredCell(values[0] || '', 'wbs-title-cell', 'ここにWBS項目名を入力', true),
@@ -4366,40 +4283,39 @@ function addWBSStructuredRow(values = [], level = 0, focus = true) {
         makeStructuredCell(values[2] || '', 'wbs-owner-cell', '担当者', true),
         makeStructuredCell(values[3] || '', 'wbs-status-cell', 'ステータス', true)
     ], safeLevel, false);
-    tbody.appendChild(row);
-    if (focus) queueFocusEditableCell(row.querySelector('.wbs-title-input'));
+    editor.appendChild(row);
+    if (focus) queueFocusEditableCell(row.querySelector('.wbs-title-cell'));
     return row;
 }
 function updateWBSRowLevel(row, nextLevel) {
-    if (!row) return;
     const level = Math.max(0, Math.min(MAX_WBS_LEVEL - 1, nextLevel));
     row.dataset.level = String(level);
+    row.style.setProperty('--wbs-level', level);
 }
 function wbsStructuredEditorToText() {
     const editor = document.getElementById('wbs-structured-editor');
     if (!editor) return document.getElementById('wbs-textarea')?.value || '';
-    const rows = getStructuredRows(editor, false);
+    const rows = Array.from(editor.querySelectorAll('.structured-row:not(.header)'));
     return rows.map(row => {
         const level = Math.max(0, Math.min(MAX_WBS_LEVEL - 1, Number(row.dataset.level || 0)));
-        const cells = getStructuredInputs(row).map(getCellPlainText);
+        const cells = Array.from(row.children).map(getCellPlainText);
         return '\t'.repeat(level) + cells.join('\t');
     }).filter(line => line.replace(/\t/g, '').trim() !== '').join('\n');
 }
 function handleWBSStructuredKeydown(e) {
     const editor = document.getElementById('wbs-structured-editor');
     if (!editor) return;
-    const cell = e.target.closest && e.target.closest('.structured-input');
-    if (!cell || !editor.contains(cell)) return;
-    const row = cell.closest('.structured-row');
-    if (!row || row.classList.contains('header')) return;
+    const cell = e.target.closest && e.target.closest('.structured-cell');
+    if (!cell || !editor.contains(cell) || cell.parentElement.classList.contains('header')) return;
+    const row = cell.parentElement;
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         const nextRow = addWBSStructuredRow([], Number(row.dataset.level || 0), false);
         row.after(nextRow);
-        queueFocusEditableCell(nextRow.querySelector('.wbs-title-input'));
+        queueFocusEditableCell(nextRow.querySelector('.wbs-title-cell'));
     } else if (e.key === 'Tab') {
         e.preventDefault();
-        if (cell.classList.contains('wbs-title-input') && (e.shiftKey || isCaretAtCellStart(cell))) {
+        if (cell.classList.contains('wbs-title-cell') && (e.shiftKey || isCaretAtCellStart(cell))) {
             const current = Number(row.dataset.level || 0);
             if (e.shiftKey) updateWBSRowLevel(row, current - 1);
             else if (current < MAX_WBS_LEVEL - 1) updateWBSRowLevel(row, current + 1);
@@ -4408,19 +4324,14 @@ function handleWBSStructuredKeydown(e) {
             syncTextareasFromStructuredEditors(false);
             return;
         }
-        const cells = getStructuredInputs(row);
-        const rows = getStructuredRows(editor, true);
+        const cells = Array.from(row.children);
+        const rows = Array.from(editor.querySelectorAll('.structured-row'));
         const rowIndex = rows.indexOf(row);
         const cellIndex = cells.indexOf(cell);
         let target;
-        if (e.shiftKey) {
-            const prevRow = rows[rowIndex - 1];
-            target = cells[cellIndex - 1] || (prevRow && getStructuredInputs(prevRow).slice(-1)[0]);
-        } else {
-            const nextRow = rows[rowIndex + 1];
-            target = cells[cellIndex + 1] || (nextRow && getStructuredInputs(nextRow)[0]);
-        }
-        if (!target && !e.shiftKey) target = getStructuredInputs(addWBSStructuredRow([], Number(row.dataset.level || 0), false))[0];
+        if (e.shiftKey) target = row.children[cellIndex - 1] || (rows[rowIndex - 1] && rows[rowIndex - 1].lastElementChild);
+        else target = row.children[cellIndex + 1] || (rows[rowIndex + 1] && rows[rowIndex + 1].firstElementChild);
+        if (!target && !e.shiftKey) target = addWBSStructuredRow([], Number(row.dataset.level || 0), false).firstElementChild;
         queueFocusEditableCell(target);
     }
 }
@@ -4449,6 +4360,7 @@ function onWBSSourceInput() {
 function syncTextareasFromStructuredEditors(save = false) {
     const todoTa = document.getElementById('todo-textarea');
     const wbsTa = document.getElementById('wbs-textarea');
+    // 表の各セルを主入力欄にしたため、TXT用の非表示textareaへ常に同期する。
     if (todoTa && document.getElementById('todo-structured-editor')) {
         todoTa.value = todoStructuredEditorToText();
         todoSourceDirty = false;
@@ -4461,13 +4373,13 @@ function syncTextareasFromStructuredEditors(save = false) {
 }
 
 function focusFirstTodoInputCell() {
-    const firstCell = document.querySelector('#todo-structured-editor .structured-row:not(.header) .structured-input');
+    const firstCell = document.querySelector('#todo-structured-editor .structured-row:not(.header) .structured-cell');
     if (firstCell) { queueFocusEditableCell(firstCell, true); return; }
     const ta = document.getElementById('todo-textarea');
     if (ta) { try { ta.focus({ preventScroll: true }); } catch (e) { try { ta.focus(); } catch (ignore) {} } }
 }
 function focusFirstWBSInputCell() {
-    const firstCell = document.querySelector('#wbs-structured-editor .structured-row:not(.header) .wbs-title-input');
+    const firstCell = document.querySelector('#wbs-structured-editor .structured-row:not(.header) .wbs-title-cell');
     if (firstCell) { queueFocusEditableCell(firstCell, true); return; }
     const ta = document.getElementById('wbs-textarea');
     if (ta) { try { ta.focus({ preventScroll: true }); } catch (e) { try { ta.focus(); } catch (ignore) {} } }
