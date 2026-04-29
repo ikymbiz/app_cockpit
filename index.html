@@ -3245,44 +3245,83 @@ function highlight(color) {
     onEditorInput();
 }
 
-function clearHighlight() {
-    const sel = window.getSelection();
-    const editor = document.getElementById('editor');
-    if (!editor) return;
-    if (!sel || !sel.rangeCount || sel.isCollapsed) {
-        const node = sel && sel.anchorNode ? (sel.anchorNode.nodeType === Node.ELEMENT_NODE ? sel.anchorNode : sel.anchorNode.parentElement) : null;
-        const marker = node ? node.closest('.marker, span[style*="background"]') : null;
-        if (marker && editor.contains(marker)) {
-            const parent = marker.parentNode;
-            while (marker.firstChild) parent.insertBefore(marker.firstChild, marker);
-            marker.remove();
-            onEditorInput();
-            toast('蛍光ペンを無色化しました', 'success');
-        }
-        return;
-    }
-    const range = sel.getRangeAt(0);
-    const frag = range.extractContents();
-    const wrap = document.createElement('div');
-    wrap.appendChild(frag);
-    wrap.querySelectorAll('.marker').forEach(m => {
+// 蛍光ペン由来の色（背景・前景）を「ある DOM サブツリー」から取り除く。
+// .marker クラスや execCommand 由来の <font color>, <span style="background-color/color">
+// を全て対象にし、編集前のCSSデフォルト（var(--text)/透明）に戻す。
+function stripHighlightStyles(root) {
+    if (!root) return;
+    // <font color="..."> や <font style="..."> を unwrap（execCommand fore/hiliteColor 由来）
+    root.querySelectorAll('font').forEach(f => {
+        const parent = f.parentNode;
+        while (f.firstChild) parent.insertBefore(f.firstChild, f);
+        f.remove();
+    });
+    // .marker / 蛍光ペン span を unwrap
+    root.querySelectorAll('span.marker, span.marker-yellow, span.marker-cyan, span.marker-pink, span.marker-green').forEach(m => {
         const parent = m.parentNode;
         while (m.firstChild) parent.insertBefore(m.firstChild, m);
         m.remove();
     });
-    wrap.querySelectorAll('[style]').forEach(el => {
-        el.style.backgroundColor = '';
-        el.style.background = '';
-        // 蛍光ペンと一緒に上書きされた文字色も解除（白背景の編集体験で読めなくなるのを防ぐ）
-        el.style.color = '';
+    // 残った要素の inline 背景／文字色を削除
+    const all = root.querySelectorAll('[style], [bgcolor], [color]');
+    all.forEach(el => {
+        if (el.hasAttribute('bgcolor')) el.removeAttribute('bgcolor');
+        if (el.hasAttribute('color')) el.removeAttribute('color');
+        if (el.style) {
+            el.style.backgroundColor = '';
+            el.style.background = '';
+            el.style.color = '';
+        }
         if (!el.getAttribute('style')) el.removeAttribute('style');
     });
-    range.insertNode(wrap);
-    while (wrap.firstChild) wrap.parentNode.insertBefore(wrap.firstChild, wrap);
-    wrap.remove();
-    sel.removeAllRanges();
-    onEditorInput();
-    toast('選択範囲の蛍光ペンを無色化しました', 'success');
+    // 不要になった空 span を unwrap（属性なし、子はあるかも）
+    root.querySelectorAll('span').forEach(s => {
+        if (s.attributes.length === 0) {
+            const parent = s.parentNode;
+            while (s.firstChild) parent.insertBefore(s.firstChild, s);
+            s.remove();
+        }
+    });
+}
+
+function clearHighlight() {
+    const sel = window.getSelection();
+    const editor = document.getElementById('editor');
+    if (!editor) return;
+
+    // 1) 選択範囲がある場合：その範囲の中身を取り出して、ハイライト関連スタイルを完全に除去して戻す
+    if (sel && sel.rangeCount && !sel.isCollapsed) {
+        const range = sel.getRangeAt(0);
+        // 選択をまたぐ marker は extractContents で分割されるが、戻したフラグメントから unwrap して整形する
+        const frag = range.extractContents();
+        const wrap = document.createElement('div');
+        wrap.appendChild(frag);
+        stripHighlightStyles(wrap);
+        const inserted = document.createDocumentFragment();
+        while (wrap.firstChild) inserted.appendChild(wrap.firstChild);
+        range.insertNode(inserted);
+        // 周囲（直前直後）に残ってしまった空の marker や直接祖先も整理
+        const container = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+            ? range.commonAncestorContainer
+            : range.commonAncestorContainer.parentNode;
+        if (container && editor.contains(container)) stripHighlightStyles(container);
+        sel.removeAllRanges();
+        onEditorInput();
+        toast('選択範囲の蛍光ペンを無色化しました', 'success');
+        return;
+    }
+
+    // 2) 選択がない（キャレットだけ）の場合：その位置を含むハイライト要素を unwrap
+    const node = sel && sel.anchorNode ? (sel.anchorNode.nodeType === Node.ELEMENT_NODE ? sel.anchorNode : sel.anchorNode.parentElement) : null;
+    const marker = node ? node.closest('.marker, span[style*="background"], span[style*="color"], font[color], font[style]') : null;
+    if (marker && editor.contains(marker)) {
+        // marker そのものとその子孫からハイライト関連スタイルを除去（marker 自身も unwrap される）
+        stripHighlightStyles(marker.parentNode || editor);
+        onEditorInput();
+        toast('蛍光ペンを無色化しました', 'success');
+        return;
+    }
+    // フォールバック：エディタ全体を対象にしないと混乱するため、ここでは何もしない
 }
 
 function insertLink() {
