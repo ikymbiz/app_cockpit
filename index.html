@@ -1154,16 +1154,15 @@ textarea.structured-cell {
                 <span>進行中: <b id="stat-doing">0</b></span>
                 <span>完了: <b id="stat-done">0</b></span>
             </div>
+            <button class="tool-btn" onclick="addBlankTask()" style="background:var(--accent);color:#fff;border-color:var(--accent);">➕ ToDoを追加</button>
             <button class="tool-btn" onclick="addTodoColumn()">+ カラム</button>
-            <button class="tool-btn" onclick="refreshTodoText()">📝 テキスト反映</button>
-            <button class="tool-btn" onclick="applyTodoText()">⬆ テキストから更新</button>
             <button class="tool-btn" onclick="exportTodoText()">📄 TXT</button>
             <button class="tool-btn" onclick="exportTasksCSV()">📥 CSVエクスポート</button>
             <button class="tool-btn" onclick="document.getElementById('csv-import-tasks').click()">📤 CSVインポート</button>
             <input type="file" id="csv-import-tasks" accept=".csv" style="display:none" onchange="importTasksCSV(event)">
         </div>
     </div>
-    <div class="text-workbench">
+    <div class="text-workbench" style="display:none;">
         <div class="text-workbench-header">
             <b>ToDo テキスト入力</b>
             <span>1行1ToDo。カラムはTab区切り。ヘッダー行を書き換えてカラム追加も可能。</span>
@@ -1190,8 +1189,8 @@ textarea.structured-cell {
             <tbody id="tasks-tbody"></tbody>
         </table>
         <div style="color:var(--text-dim);font-size:11px;margin-top:6px;">
-            ヒント：ここで作ったタスクは「親タスク」列で他タスクの内訳に紐付け可能。<br>
-            「WBS」タブから直接作成・編集することもできます。
+            ヒント：セルをクリックして直接入力できます。タイトル欄でEnterを押すと次の行が追加されます。<br>
+            「親タスク」列で他タスクの内訳に紐付け可能。「WBS」タブから階層構造で作成・編集することもできます。
         </div>
     </div>
 </div>
@@ -1206,17 +1205,16 @@ textarea.structured-cell {
                 <button class="gantt-scale-btn active" onclick="setGanttScale('w')" data-scale="w">週</button>
                 <button class="gantt-scale-btn" onclick="setGanttScale('m')" data-scale="m">月</button>
             </div>
-            <button class="tool-btn" onclick="refreshWBSText()">📝 テキスト反映</button>
-            <button class="tool-btn" onclick="applyWBSText()">⬆ テキストから更新</button>
+            <button class="tool-btn" onclick="addWBSRoot()" style="background:var(--accent);color:#fff;border-color:var(--accent);">➕ WBSを追加</button>
             <button class="tool-btn" onclick="exportWBSText()">📄 TXT</button>
             <button class="tool-btn" onclick="exportTasksCSV()">📥 CSV</button>
             <button class="tool-btn" onclick="document.getElementById('csv-import-wbs').click()">📤 CSV読込</button>
             <input type="file" id="csv-import-wbs" accept=".csv" style="display:none" onchange="importTasksCSV(event)">
             <button class="tool-btn" onclick="exportToPPTX()">📤 PowerPoint出力</button>
-            <span style="color:var(--text-dim);font-size:11px;">Enter=次の同階層 / Tab=子追加 / Shift+Tab=親階層 / Esc=取消</span>
+            <span style="color:var(--text-dim);font-size:11px;">ダブルクリックで編集 / Enter=同階層 / Tab=子追加 / Shift+Tab=親階層 / Esc=取消</span>
         </div>
     </div>
-    <div class="text-workbench">
+    <div class="text-workbench" style="display:none;">
         <div class="text-workbench-header">
             <b>WBS テキスト入力</b>
             <span>行頭Tabで階層化。L7まで。列は「タスク名 / 期日 / 担当者 / ステータス」をTab区切り。</span>
@@ -1503,27 +1501,8 @@ textarea.structured-cell {
 
 // ========== グローバル状態 ==========
 const STORE_KEY = 'cockpit_data_v1';
-let state = {
-    folders: [],     // [{id, name, parent, expanded}]
-    memos: [],       // [{id, folderId, title, body, tags:[], created, updated}]
-    tasks: [],       // [{id, title, date, owner, status, memoId, wbsId, parentId, order}]
-    settings: { indent: 4, todoColumns: DEFAULT_TODO_COLUMNS, shortcuts: { clearHighlight: 'Ctrl+Shift+H', exportMemo: 'Ctrl+E' } },
-    selectedFolderId: null,
-    selectedMemoId: null,
-    activeTagFilters: [],
-    currentTaskMemoId: null,
-    editingWbsId: null,
-    ganttScale: 'w',  // d/w/m
-    recordings: [],   // [{id, blobUrl, name, date, duration}]
-    trashMemos: [],    // [{...memo, deletedAt, originalFolderId}]
-};
-let mediaRecorder = null;
-let recordChunks = [];
-let recordStartTime = 0;
-let recordTimerInterval = null;
-let captureStream = null;
-let lastSelectionRange = null;
 
+// 定数群（state より先に宣言：state の初期値で参照されるため）
 const MAX_WBS_LEVEL = 7;
 const TRASH_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const BACKUP_INTERVAL_MS = 3 * 60 * 60 * 1000;
@@ -1540,6 +1519,27 @@ const DEFAULT_TODO_COLUMNS = [
     { key: 'relatedWbs', label: '関連WBS', type: 'text' },
     { key: 'relatedMemo', label: '関連議事録', type: 'text' },
 ];
+
+let state = {
+    folders: [],     // [{id, name, parent, expanded}]
+    memos: [],       // [{id, folderId, title, body, tags:[], created, updated}]
+    tasks: [],       // [{id, title, date, owner, status, memoId, wbsId, parentId, order}]
+    settings: { indent: 4, todoColumns: DEFAULT_TODO_COLUMNS.slice(), shortcuts: { clearHighlight: 'Ctrl+Shift+H', exportMemo: 'Ctrl+E' } },
+    selectedFolderId: null,
+    selectedMemoId: null,
+    activeTagFilters: [],
+    currentTaskMemoId: null,
+    editingWbsId: null,
+    ganttScale: 'w',  // d/w/m
+    recordings: [],   // [{id, blobUrl, name, date, duration}]
+    trashMemos: [],    // [{...memo, deletedAt, originalFolderId}]
+};
+let mediaRecorder = null;
+let recordChunks = [];
+let recordStartTime = 0;
+let recordTimerInterval = null;
+let captureStream = null;
+let lastSelectionRange = null;
 
 // ========== 永続化 ==========
 function buildPersistedData() {
@@ -2206,8 +2206,8 @@ function showTab(tabId, btn) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
     if (btn) btn.classList.add('active');
-    if (tabId === 'tab-tasks') { renderTasks(); refreshTodoText(); focusFirstTodoInputCell(); }
-    if (tabId === 'tab-wbsgantt') { renderWBS(); renderGantt(); refreshWBSText(); focusFirstWBSInputCell(); }
+    if (tabId === 'tab-tasks') { renderTasks(); refreshTodoText(); }
+    if (tabId === 'tab-wbsgantt') { renderWBS(); renderGantt(); refreshWBSText(); }
 }
 
 // ========== フォルダツリー ==========
@@ -2254,8 +2254,8 @@ function renderFolderNode(folder, depth) {
     item.onclick = () => {
         state.selectedFolderId = folder.id;
         renderFolderTree(); renderMemoList(); refreshTodoText(); refreshWBSText();
-        if (document.getElementById('tab-tasks')?.classList.contains('active')) focusFirstTodoInputCell();
-        if (document.getElementById('tab-wbsgantt')?.classList.contains('active')) focusFirstWBSInputCell();
+        if (document.getElementById('tab-tasks')?.classList.contains('active')) renderTasks();
+        if (document.getElementById('tab-wbsgantt')?.classList.contains('active')) { renderWBS(); renderGantt(); }
     };
     item.draggable = true;
     item.addEventListener('dragstart', (e) => {
@@ -4623,7 +4623,7 @@ function renderWBS() {
     const roots = getWBSTasksForFolder().filter(t => !t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
     roots.forEach(t => renderWBSNode(t, 0, tree));
     if (roots.length === 0) {
-        tree.innerHTML = '<div style="color:var(--text-dim);text-align:center;margin-top:30px;padding:20px;">タスクがありません<br><br>上のWBSテキスト入力欄に入力して「テキストから更新」を押してください</div>';
+        tree.innerHTML = '<div style="color:var(--text-dim);text-align:center;margin-top:30px;padding:20px;line-height:1.8;">タスクがありません<br><br><button class="tool-btn" onclick="addWBSRoot()" style="background:var(--accent);color:#fff;border-color:var(--accent);font-size:13px;padding:8px 16px;">➕ 最初のWBSタスクを追加</button><br><br><span style="font-size:11px;">追加後、ダブルクリックで編集・Enterで同階層追加・Tabで子追加</span></div>';
     }
 }
 function renderWBSNode(task, depth, parentEl) {
