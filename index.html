@@ -538,11 +538,12 @@ html, body {
 #editor div { min-height: 1.7em; }
 #editor b, #editor strong { font-weight: 700; color: #fff; }
 #editor i, #editor em { font-style: italic; }
-#editor .marker { background: var(--highlight); color: #000; padding: 0 2px; border-radius: 2px; }
-#editor .marker.marker-yellow { background: #ffeb3b; color: #000; }
-#editor .marker.marker-cyan   { background: #80deea; color: #000; }
-#editor .marker.marker-pink   { background: #f8bbd0; color: #000; }
-#editor .marker.marker-green  { background: #a5d6a7; color: #000; }
+/* 蛍光ペン：色は実際の蛍光ペンに近い淡くて鮮やかな色、文字色はくっきり読める濃い墨色 */
+#editor .marker { background: var(--highlight); color: #1a1a1a; padding: 0 2px; border-radius: 2px; }
+#editor .marker.marker-yellow { background: #fff59d; color: #1a1a1a; }
+#editor .marker.marker-cyan   { background: #b3e5fc; color: #102a3a; }
+#editor .marker.marker-pink   { background: #f8bbd0; color: #3b1029; }
+#editor .marker.marker-green  { background: #c8e6c9; color: #102a13; }
 .highlight-color-select {
     background: var(--panel-2); color: var(--text);
     border: 1px solid var(--border); border-radius: 3px;
@@ -678,6 +679,49 @@ html, body {
 .wbs-node .controls button:hover { color: var(--accent); border-color: var(--accent); }
 .wbs-node.dragging { opacity: 0.4; }
 .wbs-node.drag-over { border-top: 2px solid var(--accent); }
+
+/* ====== フィルタバー（タスク・WBS共通） ====== */
+.filter-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 6px 14px; background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+}
+.filter-bar .filter-label { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+.filter-bar input[type="text"], .filter-bar select {
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 3px;
+    padding: 3px 6px; font-size: 11px; height: 24px;
+}
+.filter-bar input[type="text"] { min-width: 160px; }
+.filter-bar input[type="text"]:focus, .filter-bar select:focus {
+    outline: 1px solid var(--accent); border-color: var(--accent);
+}
+.filter-bar .filter-count { font-size: 11px; color: var(--text-dim); margin-left: auto; }
+.tree-quick-paths {
+    display: flex; gap: 4px; margin-left: auto;
+}
+.tree-quick-paths button {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-dim); border-radius: 3px;
+    padding: 1px 6px; font-size: 10px; cursor: pointer;
+}
+.tree-quick-paths button:hover { color: var(--accent); border-color: var(--accent); }
+.tree-item.selected .tree-quick-paths button { color: var(--text); }
+.workflow-path {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 10px; margin: 6px 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 4px; font-size: 11px;
+}
+.workflow-path .step {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 3px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--panel);
+    color: var(--text-dim); white-space: nowrap;
+}
+.workflow-path .step:hover { color: var(--text); border-color: var(--accent); }
+.workflow-path .step.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+.workflow-path .arrow { color: var(--text-dim); font-size: 10px; }
 
 /* ====== WBS & ガント統合タブ ====== */
 #tab-wbsgantt { flex-direction: column; }
@@ -1104,6 +1148,14 @@ textarea.structured-cell {
         </div>
         <div class="sidebar-body" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
             <div class="folder-tree" id="folder-tree"></div>
+            <!-- フォルダ単位の一連の流れ（議事メモ → ToDo → WBS） -->
+            <div class="workflow-path" id="folder-workflow-path" title="このフォルダを軸に「議事メモ → ToDo → WBS」を行き来できます">
+                <span class="step active" data-tab="tab-editor" onclick="gotoFolderTab('tab-editor')">📝 議事メモ</span>
+                <span class="arrow">→</span>
+                <span class="step" data-tab="tab-tasks" onclick="gotoFolderTab('tab-tasks')">📋 ToDo</span>
+                <span class="arrow">→</span>
+                <span class="step" data-tab="tab-wbsgantt" onclick="gotoFolderTab('tab-wbsgantt')">🏗 WBS</span>
+            </div>
             <div class="tag-filter">
                 <h3>🏷 タグで絞り込み</h3>
                 <div id="tag-filter-list"></div>
@@ -1200,6 +1252,35 @@ textarea.structured-cell {
             <input type="file" id="csv-import-tasks" accept=".csv" style="display:none" onchange="importTasksCSV(event)">
         </div>
     </div>
+    <div class="filter-bar" id="todo-filter-bar">
+        <span class="filter-label">🔎 フィルタ：</span>
+        <input type="text" id="todo-filter-text" placeholder="内容・備考で検索" oninput="onTodoFilterChange()">
+        <select id="todo-filter-status" onchange="onTodoFilterChange()">
+            <option value="">ステータス：すべて</option>
+            <option value="未着手">未着手</option>
+            <option value="進行中">進行中</option>
+            <option value="完了">完了</option>
+            <option value="保留">保留</option>
+        </select>
+        <select id="todo-filter-owner" onchange="onTodoFilterChange()">
+            <option value="">担当者：すべて</option>
+        </select>
+        <select id="todo-filter-priority" onchange="onTodoFilterChange()">
+            <option value="">優先度：すべて</option>
+            <option value="高">高</option>
+            <option value="中">中</option>
+            <option value="低">低</option>
+        </select>
+        <select id="todo-filter-due" onchange="onTodoFilterChange()">
+            <option value="">期限：すべて</option>
+            <option value="overdue">期限超過</option>
+            <option value="today">今日</option>
+            <option value="week">7日以内</option>
+            <option value="none">期限なし</option>
+        </select>
+        <button class="tool-btn" onclick="clearTodoFilters()">クリア</button>
+        <span class="filter-count" id="todo-filter-count"></span>
+    </div>
     <div class="text-workbench" style="display:none;">
         <div class="text-workbench-header">
             <b>ToDo テキスト入力</b>
@@ -1251,6 +1332,29 @@ textarea.structured-cell {
             <button class="tool-btn" onclick="exportToPPTX()">📤 PowerPoint出力</button>
             <span style="color:var(--text-dim);font-size:11px;">ダブルクリックで編集 / Enter=同階層 / Tab=子追加 / Shift+Tab=親階層 / Esc=取消</span>
         </div>
+    </div>
+    <div class="filter-bar" id="wbs-filter-bar">
+        <span class="filter-label">🔎 フィルタ：</span>
+        <input type="text" id="wbs-filter-text" placeholder="タスク名で検索" oninput="onWBSFilterChange()">
+        <select id="wbs-filter-status" onchange="onWBSFilterChange()">
+            <option value="">ステータス：すべて</option>
+            <option value="未着手">未着手</option>
+            <option value="進行中">進行中</option>
+            <option value="完了">完了</option>
+            <option value="保留">保留</option>
+        </select>
+        <select id="wbs-filter-owner" onchange="onWBSFilterChange()">
+            <option value="">担当者：すべて</option>
+        </select>
+        <select id="wbs-filter-due" onchange="onWBSFilterChange()">
+            <option value="">期限：すべて</option>
+            <option value="overdue">期限超過</option>
+            <option value="today">今日</option>
+            <option value="week">7日以内</option>
+            <option value="none">期限なし</option>
+        </select>
+        <button class="tool-btn" onclick="clearWBSFilters()">クリア</button>
+        <span class="filter-count" id="wbs-filter-count"></span>
     </div>
     <div class="text-workbench" style="display:none;">
         <div class="text-workbench-header">
@@ -2051,6 +2155,124 @@ function getActiveFolderName() {
     const f = state.folders.find(x => x.id === getActiveFolderId());
     return f ? f.name : '全般';
 }
+
+// ========== ToDo / WBS フィルタ ==========
+function getDateBucket(dateStr) {
+    if (!dateStr) return 'none';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'none';
+    const today = new Date(); today.setHours(0,0,0,0);
+    const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const diff = Math.round((target - today) / 86400000);
+    if (diff < 0) return 'overdue';
+    if (diff === 0) return 'today';
+    if (diff <= 7) return 'week';
+    return 'future';
+}
+function dueMatches(dateStr, dueFilter) {
+    if (!dueFilter) return true;
+    const b = getDateBucket(dateStr);
+    if (dueFilter === 'overdue') return b === 'overdue';
+    if (dueFilter === 'today') return b === 'today';
+    if (dueFilter === 'week') return b === 'today' || b === 'week';
+    if (dueFilter === 'none') return b === 'none';
+    return true;
+}
+function applyTodoFilters(tasks) {
+    const text = (document.getElementById('todo-filter-text')?.value || '').trim().toLowerCase();
+    const status = document.getElementById('todo-filter-status')?.value || '';
+    const owner = document.getElementById('todo-filter-owner')?.value || '';
+    const priority = document.getElementById('todo-filter-priority')?.value || '';
+    const due = document.getElementById('todo-filter-due')?.value || '';
+    return tasks.filter(t => {
+        if (status && (t.status || '') !== status) return false;
+        if (owner && (t.owner || '') !== owner) return false;
+        if (priority && (t.priority || '') !== priority) return false;
+        if (due && !dueMatches(t.date, due)) return false;
+        if (text) {
+            const hay = ((t.title || '') + ' ' + (t.relatedMemo || '') + ' ' + (t.relatedWbs || '') + ' ' + Object.values(t.extra || {}).join(' ')).toLowerCase();
+            if (!hay.includes(text)) return false;
+        }
+        return true;
+    });
+}
+function applyWBSFilters(tasks) {
+    const text = (document.getElementById('wbs-filter-text')?.value || '').trim().toLowerCase();
+    const status = document.getElementById('wbs-filter-status')?.value || '';
+    const owner = document.getElementById('wbs-filter-owner')?.value || '';
+    const due = document.getElementById('wbs-filter-due')?.value || '';
+    return tasks.filter(t => {
+        if (status && (t.status || '') !== status) return false;
+        if (owner && (t.owner || '') !== owner) return false;
+        if (due && !dueMatches(t.date, due)) return false;
+        if (text && !((t.title || '').toLowerCase().includes(text))) return false;
+        return true;
+    });
+}
+function isWBSFilterActive() {
+    return !!(
+        (document.getElementById('wbs-filter-text')?.value || '').trim() ||
+        document.getElementById('wbs-filter-status')?.value ||
+        document.getElementById('wbs-filter-owner')?.value ||
+        document.getElementById('wbs-filter-due')?.value
+    );
+}
+function expandWBSVisibleSet(tasks, matched) {
+    // 一致したノードに加え、その祖先（道筋を見せる）と子孫（コンテキスト）を可視に
+    const byId = new Map(tasks.map(t => [t.id, t]));
+    const visible = new Set();
+    const addAncestors = (id) => {
+        let cur = byId.get(id);
+        const seen = new Set();
+        while (cur && !seen.has(cur.id)) {
+            seen.add(cur.id);
+            visible.add(cur.id);
+            cur = cur.parentId ? byId.get(cur.parentId) : null;
+        }
+    };
+    const addDescendants = (id) => {
+        const stack = [id];
+        const seen = new Set();
+        while (stack.length) {
+            const cid = stack.pop();
+            if (seen.has(cid)) continue;
+            seen.add(cid);
+            visible.add(cid);
+            tasks.filter(t => t.parentId === cid).forEach(c => stack.push(c.id));
+        }
+    };
+    matched.forEach(id => { addAncestors(id); addDescendants(id); });
+    return visible;
+}
+function refreshTodoOwnerFilterOptions(tasks) {
+    refreshOwnerSelect('todo-filter-owner', tasks);
+}
+function refreshWBSOwnerFilterOptions(tasks) {
+    refreshOwnerSelect('wbs-filter-owner', tasks);
+}
+function refreshOwnerSelect(selectId, tasks) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const current = sel.value;
+    const owners = Array.from(new Set(tasks.map(t => (t.owner || '').trim()).filter(Boolean))).sort();
+    sel.innerHTML = '<option value="">担当者：すべて</option>' +
+        owners.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
+    if (owners.includes(current)) sel.value = current;
+}
+function onTodoFilterChange() { renderTasks(); }
+function onWBSFilterChange() { renderWBS(); }
+function clearTodoFilters() {
+    ['todo-filter-text','todo-filter-status','todo-filter-owner','todo-filter-priority','todo-filter-due'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+    });
+    renderTasks();
+}
+function clearWBSFilters() {
+    ['wbs-filter-text','wbs-filter-status','wbs-filter-owner','wbs-filter-due'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+    });
+    renderWBS();
+}
 function makeSafeTimestamp() {
     return formatTemplate('{yyyy}{mm}{dd}_{hh}{nn}{ss}');
 }
@@ -2252,8 +2474,22 @@ function showTab(tabId, btn) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
     if (btn) btn.classList.add('active');
+    else {
+        const matching = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+        if (matching) matching.classList.add('active');
+    }
     if (tabId === 'tab-tasks') { renderTasks(); refreshTodoText(); }
     if (tabId === 'tab-wbsgantt') { renderWBS(); renderGantt(); refreshWBSText(); }
+    updateWorkflowPath(tabId);
+}
+function updateWorkflowPath(tabId) {
+    document.querySelectorAll('#folder-workflow-path .step').forEach(s => {
+        s.classList.toggle('active', s.dataset.tab === tabId);
+    });
+}
+// 議事メモ → ToDo → WBS のフロー切替（フォルダは現在の選択を維持）
+function gotoFolderTab(tabId) {
+    showTab(tabId);
 }
 
 // ========== フォルダツリー ==========
@@ -2961,11 +3197,11 @@ function execCmd(cmd, val = null) {
     onEditorInput();
 }
 const HIGHLIGHT_COLOR_MAP = {
-    none:   { css: '',         className: '' },
-    yellow: { css: '#ffeb3b',  className: 'marker-yellow' },
-    cyan:   { css: '#80deea',  className: 'marker-cyan' },
-    pink:   { css: '#f8bbd0',  className: 'marker-pink' },
-    green:  { css: '#a5d6a7',  className: 'marker-green' },
+    none:   { bg: '',         text: '',         className: '' },
+    yellow: { bg: '#fff59d',  text: '#1a1a1a',  className: 'marker-yellow' },
+    cyan:   { bg: '#b3e5fc',  text: '#102a3a',  className: 'marker-cyan' },
+    pink:   { bg: '#f8bbd0',  text: '#3b1029',  className: 'marker-pink' },
+    green:  { bg: '#c8e6c9',  text: '#102a13',  className: 'marker-green' },
 };
 function getSelectedHighlightColor() {
     const sel = document.getElementById('highlight-color-select');
@@ -2990,14 +3226,16 @@ function highlight(color) {
     color = color || getSelectedHighlightColor();
     if (color === 'none') { clearHighlight(); return; }
     const info = HIGHLIGHT_COLOR_MAP[color] || HIGHLIGHT_COLOR_MAP.yellow;
-    try { document.execCommand('hiliteColor', false, info.css); } catch (e) { /* ignore */ }
+    try { document.execCommand('hiliteColor', false, info.bg); } catch (e) { /* ignore */ }
+    try { document.execCommand('foreColor', false, info.text); } catch (e) { /* ignore */ }
     // 念のためspanで包む（色クラスを付ける）
     const sel = window.getSelection();
     if (sel && sel.rangeCount && !sel.isCollapsed) {
         const range = sel.getRangeAt(0);
         const span = document.createElement('span');
         span.className = 'marker ' + info.className;
-        span.style.backgroundColor = info.css;
+        span.style.backgroundColor = info.bg;
+        span.style.color = info.text;
         try {
             span.appendChild(range.extractContents());
             range.insertNode(span);
@@ -3035,6 +3273,8 @@ function clearHighlight() {
     wrap.querySelectorAll('[style]').forEach(el => {
         el.style.backgroundColor = '';
         el.style.background = '';
+        // 蛍光ペンと一緒に上書きされた文字色も解除（白背景の編集体験で読めなくなるのを防ぐ）
+        el.style.color = '';
         if (!el.getAttribute('style')) el.removeAttribute('style');
     });
     range.insertNode(wrap);
@@ -4149,7 +4389,12 @@ function renderTasks() {
     const columns = state.settings.todoColumns || DEFAULT_TODO_COLUMNS;
     theadRow.innerHTML = columns.map(c => `<th>${escapeHtml(c.label)}</th>`).join('') + '<th style="width:4%"></th>';
     tbody.innerHTML = '';
-    getTodoTasksForFolder().forEach(t => {
+    const all = getTodoTasksForFolder();
+    refreshTodoOwnerFilterOptions(all);
+    const filtered = applyTodoFilters(all);
+    const cnt = document.getElementById('todo-filter-count');
+    if (cnt) cnt.textContent = (filtered.length === all.length) ? `${all.length}件` : `${filtered.length} / ${all.length} 件`;
+    filtered.forEach(t => {
         const tr = document.createElement('tr');
         columns.forEach(col => {
             const td = document.createElement('td');
@@ -4748,13 +4993,23 @@ function renderWBS() {
     const tree = document.getElementById('wbs-tree');
     if (!tree) return;
     tree.innerHTML = '';
-    const roots = getWBSTasksForFolder().filter(t => !t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
-    roots.forEach(t => renderWBSNode(t, 0, tree));
+    const all = getWBSTasksForFolder();
+    refreshWBSOwnerFilterOptions(all);
+    const filterActive = isWBSFilterActive();
+    const matched = filterActive ? new Set(applyWBSFilters(all).map(t => t.id)) : null;
+    // 上位タスクは下位がヒットしている場合も表示する
+    const visibleSet = filterActive ? expandWBSVisibleSet(all, matched) : null;
+    const cnt = document.getElementById('wbs-filter-count');
+    if (cnt) cnt.textContent = filterActive ? `${matched.size} / ${all.length} 件 一致` : `${all.length}件`;
+    const roots = all.filter(t => !t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    roots.forEach(t => renderWBSNode(t, 0, tree, { matched, visibleSet }));
     if (roots.length === 0) {
         tree.innerHTML = '<div style="color:var(--text-dim);text-align:center;margin-top:30px;padding:20px;line-height:1.8;">タスクがありません<br><br><button class="tool-btn" onclick="addWBSRoot()" style="background:var(--accent);color:#fff;border-color:var(--accent);font-size:13px;padding:8px 16px;">➕ 最初のWBSタスクを追加</button><br><br><span style="font-size:11px;">追加後、ダブルクリックで編集・Enterで同階層追加・Tabで子追加</span></div>';
     }
 }
-function renderWBSNode(task, depth, parentEl) {
+function renderWBSNode(task, depth, parentEl, filterCtx) {
+    filterCtx = filterCtx || {};
+    if (filterCtx.visibleSet && !filterCtx.visibleSet.has(task.id)) return;
     const node = document.createElement('div');
     const children = getWBSTasksForFolder(task.folderId || getActiveFolderId()).filter(t => t.parentId === task.id);
     const isParent = children.length > 0;
@@ -4870,7 +5125,7 @@ function renderWBSNode(task, depth, parentEl) {
         input.onclick = (e) => e.stopPropagation();
         node.append(toggle, input);
         parentEl.appendChild(node);
-        children.sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(c => renderWBSNode(c, depth + 1, parentEl));
+        children.sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(c => renderWBSNode(c, depth + 1, parentEl, filterCtx));
         return;
     }
 
@@ -5031,7 +5286,7 @@ function renderWBSNode(task, depth, parentEl) {
         }
     });
 
-    children.sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(c => renderWBSNode(c, depth + 1, parentEl));
+    children.sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(c => renderWBSNode(c, depth + 1, parentEl, filterCtx));
 }
 function isAncestor(maybeAncestorId, descendantId) {
     let cur = state.tasks.find(t => t.id === descendantId);
