@@ -539,7 +539,19 @@ html, body {
 #editor b, #editor strong { font-weight: 700; color: #fff; }
 #editor i, #editor em { font-style: italic; }
 #editor .marker { background: var(--highlight); color: #000; padding: 0 2px; border-radius: 2px; }
-#editor a { color: var(--accent); text-decoration: underline; }
+#editor .marker.marker-yellow { background: #ffeb3b; color: #000; }
+#editor .marker.marker-cyan   { background: #80deea; color: #000; }
+#editor .marker.marker-pink   { background: #f8bbd0; color: #000; }
+#editor .marker.marker-green  { background: #a5d6a7; color: #000; }
+.highlight-color-select {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 3px;
+    padding: 2px 4px; font-size: 11px; cursor: pointer;
+    height: 24px;
+}
+.highlight-color-select:focus { outline: 1px solid var(--accent); }
+#editor a { color: var(--accent); text-decoration: underline; cursor: pointer; }
+#editor a:hover { color: var(--accent-2); }
 #editor h1 { font-size: 22px; border-bottom: 2px solid var(--border); padding-bottom: 4px; margin: 16px 0 8px; }
 #editor h2 { font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 3px; margin: 14px 0 6px; }
 #editor h3 { font-size: 15px; margin: 12px 0 5px; color: var(--accent); }
@@ -1131,8 +1143,14 @@ textarea.structured-cell {
             <button class="tool-btn" onclick="execCmd('italic')" title="斜体 (Ctrl+I)"><i>I</i></button>
             <button class="tool-btn" onclick="execCmd('undo')" title="Undo (Ctrl+Z)">↶ Undo</button>
             <button class="tool-btn" onclick="execCmd('redo')" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">↷ Redo</button>
-            <button class="tool-btn" onclick="highlight()" title="蛍光ペン">🖍 蛍光</button>
-            <button class="tool-btn" onclick="clearHighlight()" title="蛍光ペンを無色化">無色</button>
+            <select id="highlight-color-select" class="highlight-color-select" onchange="onHighlightColorChange(this.value)" title="蛍光ペンの色（無色を選ぶとハイライト解除）">
+                <option value="none">🖍 無色</option>
+                <option value="yellow" selected>🟡 黄色</option>
+                <option value="cyan">🔵 水色</option>
+                <option value="pink">🩷 ピンク</option>
+                <option value="green">🟢 緑</option>
+            </select>
+            <button class="tool-btn" onclick="applyHighlightFromSelect()" title="選択範囲に蛍光ペンを適用">🖍 蛍光</button>
             <button class="tool-btn" onclick="insertLink()" title="リンク">🔗 リンク</button>
             <div class="tool-divider"></div>
             <button class="tool-btn" onclick="insertHeading(1)">H1</button>
@@ -1146,7 +1164,7 @@ textarea.structured-cell {
             <button class="tool-btn" onclick="insertDateTime()" title="現在日時を挿入">🕒 日時</button>
             <button class="tool-btn" onclick="document.getElementById('media-file-input').click()" title="画像・動画・音声を貼り付け">🖼 メディア</button>
             <input type="file" id="media-file-input" accept="image/*,audio/*,video/*" multiple style="display:none" onchange="handleMediaFileInput(event)">
-            <button class="tool-btn" onclick="quickScreenshotSave()" title="ワンクリックでスクリーンショット保存">📸 即保存</button>
+            <button class="tool-btn" onclick="quickScreenshotSave()" title="スクショ（即保存） — Ctrl+Shift+S。ピッカーで対象ウィンドウを選び、最前面にしている間にキャプチャされます。">📸 即保存</button>
             <button class="tool-btn" onclick="startCapture()">📷 範囲キャプチャ</button>
             <button class="tool-btn" id="btn-record" onclick="toggleRecording()">🎙 録音開始</button>
             <div class="tool-divider"></div>
@@ -1166,7 +1184,7 @@ textarea.structured-cell {
 <!-- ============ タスク一覧タブ ============ -->
 <div id="tab-tasks" class="content">
     <div class="tasks-header">
-        <h2>📋 タスク一覧</h2>
+        <h2>📋 タスク一覧 <span style="font-size:12px;color:var(--text-dim);font-weight:normal;">/ フォルダ：<span id="tasks-folder-name" style="color:var(--accent);">-</span></span></h2>
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
             <div class="stats">
                 <span>総数: <b id="stat-total">0</b></span>
@@ -1218,7 +1236,7 @@ textarea.structured-cell {
 <!-- ============ WBS & ガントチャート統合タブ ============ -->
 <div id="tab-wbsgantt" class="content">
     <div class="wbsgantt-header">
-        <h2 style="margin:0;font-size:16px;">🏗 WBS（左：階層） / ガントチャート（右：時系列）</h2>
+        <h2 style="margin:0;font-size:16px;">🏗 WBS / ガント <span style="font-size:12px;color:var(--text-dim);font-weight:normal;">/ フォルダ：<span id="wbs-folder-name" style="color:var(--accent);">-</span></span></h2>
         <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
             <div class="gantt-scale-btns">
                 <button class="gantt-scale-btn" onclick="setGanttScale('d')" data-scale="d">日</button>
@@ -1398,6 +1416,7 @@ textarea.structured-cell {
             <div class="shortcut-grid">
                 <span>蛍光ペン無色化</span><input type="text" id="shortcut-clear-highlight" placeholder="Ctrl+Shift+H">
                 <span>議事録TXT出力</span><input type="text" id="shortcut-export-memo" placeholder="Ctrl+E">
+                <span>スクショ（即保存）</span><input type="text" id="shortcut-quick-screenshot" placeholder="Ctrl+Shift+S">
             </div>
         </div>
         <div class="form-row">
@@ -1551,7 +1570,7 @@ let state = {
     folders: [],     // [{id, name, parent, expanded}]
     memos: [],       // [{id, folderId, title, body, tags:[], created, updated}]
     tasks: [],       // [{id, title, date, owner, status, memoId, wbsId, parentId, order}]
-    settings: { indent: 4, todoColumns: DEFAULT_TODO_COLUMNS.slice(), shortcuts: { clearHighlight: 'Ctrl+Shift+H', exportMemo: 'Ctrl+E' } },
+    settings: { indent: 4, todoColumns: DEFAULT_TODO_COLUMNS.slice(), highlightColor: 'yellow', shortcuts: { clearHighlight: 'Ctrl+Shift+H', exportMemo: 'Ctrl+E', quickScreenshot: 'Ctrl+Shift+S' } },
     selectedFolderId: null,
     selectedMemoId: null,
     activeTagFilters: [],
@@ -1624,7 +1643,7 @@ function ensureStateShape() {
     if (!state.recordings) state.recordings = [];
     state.settings.indent = state.settings.indent || 4;
     state.settings.todoColumns = normalizeTodoColumns(state.settings.todoColumns);
-    state.settings.shortcuts = Object.assign({ clearHighlight: 'Ctrl+Shift+H', exportMemo: 'Ctrl+E' }, state.settings.shortcuts || {});
+    state.settings.shortcuts = Object.assign({ clearHighlight: 'Ctrl+Shift+H', exportMemo: 'Ctrl+E', quickScreenshot: 'Ctrl+Shift+S' }, state.settings.shortcuts || {});
     const fallbackFolderId = state.selectedFolderId || state.folders[0]?.id || null;
     state.tasks.forEach(t => {
         if (!t.folderId) t.folderId = fallbackFolderId;
@@ -2941,14 +2960,44 @@ function execCmd(cmd, val = null) {
     document.getElementById('editor').focus();
     onEditorInput();
 }
-function highlight() {
-    document.execCommand('hiliteColor', false, 'var(--highlight)');
-    // 念のためspanで包む
+const HIGHLIGHT_COLOR_MAP = {
+    none:   { css: '',         className: '' },
+    yellow: { css: '#ffeb3b',  className: 'marker-yellow' },
+    cyan:   { css: '#80deea',  className: 'marker-cyan' },
+    pink:   { css: '#f8bbd0',  className: 'marker-pink' },
+    green:  { css: '#a5d6a7',  className: 'marker-green' },
+};
+function getSelectedHighlightColor() {
+    const sel = document.getElementById('highlight-color-select');
+    return (sel && sel.value) || 'yellow';
+}
+function onHighlightColorChange(color) {
+    state.settings.highlightColor = color;
+    saveState();
+    // 「無色」を選んだら、現在の選択範囲のハイライトを解除する
+    if (color === 'none') {
+        clearHighlight();
+    } else {
+        applyHighlightFromSelect();
+    }
+}
+function applyHighlightFromSelect() {
+    const color = getSelectedHighlightColor();
+    if (color === 'none') { clearHighlight(); return; }
+    highlight(color);
+}
+function highlight(color) {
+    color = color || getSelectedHighlightColor();
+    if (color === 'none') { clearHighlight(); return; }
+    const info = HIGHLIGHT_COLOR_MAP[color] || HIGHLIGHT_COLOR_MAP.yellow;
+    try { document.execCommand('hiliteColor', false, info.css); } catch (e) { /* ignore */ }
+    // 念のためspanで包む（色クラスを付ける）
     const sel = window.getSelection();
     if (sel && sel.rangeCount && !sel.isCollapsed) {
         const range = sel.getRangeAt(0);
         const span = document.createElement('span');
-        span.className = 'marker';
+        span.className = 'marker ' + info.className;
+        span.style.backgroundColor = info.css;
         try {
             span.appendChild(range.extractContents());
             range.insertNode(span);
@@ -3540,25 +3589,73 @@ async function insertImageScaled(dataUrl, maxWidth = 600) {
 }
 
 
+// 即保存スクショ：このアプリ自身は除外し、ユーザがピッカーで選んだ「次のウィンドウ」を撮影する。
+// ピッカーで対象ウィンドウを選択した後、そのウィンドウを最前面にする時間を確保するため、
+// 既定で1.5秒のディレイを入れてからフレームを取得する。
 async function quickScreenshotSave() {
+    let stream = null;
     try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' }, audio: false });
+        const constraints = {
+            video: { cursor: 'always', displaySurface: 'window' },
+            audio: false,
+            // 自タブを除外して「他のウィンドウ」を選びやすくする（対応ブラウザのみ）
+            selfBrowserSurface: 'exclude',
+            surfaceSwitching: 'include',
+            preferCurrentTab: false,
+        };
+        try {
+            stream = await navigator.mediaDevices.getDisplayMedia(constraints);
+        } catch (e) {
+            // 古いブラウザ向けフォールバック
+            stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' }, audio: false });
+        }
         const video = document.createElement('video');
         video.srcObject = stream;
         await video.play();
+        // 対象ウィンドウを前面に切り替える猶予（1.5秒）。簡易インジケータを表示。
+        const delayMs = (state.settings && Number.isFinite(state.settings.screenshotDelayMs))
+            ? state.settings.screenshotDelayMs : 1500;
+        if (delayMs > 0) {
+            await showCountdown(Math.ceil(delayMs / 1000));
+        }
+        // 描画用にもう1フレーム待つ
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
         stream.getTracks().forEach(t => t.stop());
+        stream = null;
         canvas.toBlob(async (blob) => {
             if (!blob) { toast('スクリーンショット作成に失敗しました', 'error'); return; }
             await insertMediaFile(new File([blob], `screenshot_${makeSafeTimestamp()}.png`, { type: 'image/png' }));
             toast('スクリーンショットを保存しました', 'success');
         }, 'image/png');
     } catch (err) {
+        if (stream) { try { stream.getTracks().forEach(t => t.stop()); } catch {} }
         toast('スクリーンショット取得失敗: ' + err.message, 'error');
     }
+}
+
+// 画面右下に小さなカウントダウンを表示してsec秒待つ
+function showCountdown(sec) {
+    return new Promise(resolve => {
+        const el = document.createElement('div');
+        el.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:99999;background:rgba(0,0,0,0.85);color:#fff;font-size:13px;padding:10px 14px;border-radius:6px;border:1px solid #4a9eff;font-family:inherit;pointer-events:none;';
+        el.textContent = `📸 撮影対象を最前面にしてください… ${sec}`;
+        document.body.appendChild(el);
+        let remaining = sec;
+        const timer = setInterval(() => {
+            remaining -= 1;
+            if (remaining <= 0) {
+                clearInterval(timer);
+                el.remove();
+                resolve();
+            } else {
+                el.textContent = `📸 撮影対象を最前面にしてください… ${remaining}`;
+            }
+        }, 1000);
+    });
 }
 
 // ========== 画面キャプチャ（範囲指定） ==========
@@ -4044,6 +4141,8 @@ function addBlankTask() {
 // ========== タスク一覧描画 ==========
 function renderTasks() {
     ensureStateShape();
+    const folderNameEl = document.getElementById('tasks-folder-name');
+    if (folderNameEl) folderNameEl.textContent = getActiveFolderName();
     const tbody = document.getElementById('tasks-tbody');
     const table = tbody.closest('table');
     const theadRow = table.querySelector('thead tr');
@@ -4644,6 +4743,8 @@ async function exportTextFile(filename, content) {
 
 // ========== WBS（タスク階層化） ==========
 function renderWBS() {
+    const folderNameEl = document.getElementById('wbs-folder-name');
+    if (folderNameEl) folderNameEl.textContent = getActiveFolderName();
     const tree = document.getElementById('wbs-tree');
     if (!tree) return;
     tree.innerHTML = '';
@@ -5376,6 +5477,8 @@ function openSettings() {
     document.getElementById('setting-datetime-format').value = state.settings.dateTimeFormat || DEFAULT_DATETIME_FORMAT;
     document.getElementById('shortcut-clear-highlight').value = state.settings.shortcuts?.clearHighlight || 'Ctrl+Shift+H';
     document.getElementById('shortcut-export-memo').value = state.settings.shortcuts?.exportMemo || 'Ctrl+E';
+    const qs = document.getElementById('shortcut-quick-screenshot');
+    if (qs) qs.value = state.settings.shortcuts?.quickScreenshot || 'Ctrl+Shift+S';
     // マイク選択肢の初期化（権限なしでも保存済みdeviceIdを表示）
     const micSel = document.getElementById('setting-mic-device');
     if (micSel) {
@@ -5419,7 +5522,8 @@ function saveSettings() {
     state.settings.micDeviceId = document.getElementById('setting-mic-device')?.value || '';
     state.settings.shortcuts = {
         clearHighlight: document.getElementById('shortcut-clear-highlight')?.value || 'Ctrl+Shift+H',
-        exportMemo: document.getElementById('shortcut-export-memo')?.value || 'Ctrl+E'
+        exportMemo: document.getElementById('shortcut-export-memo')?.value || 'Ctrl+E',
+        quickScreenshot: document.getElementById('shortcut-quick-screenshot')?.value || 'Ctrl+Shift+S'
     };
     applyEditorSettings();
     saveState();
@@ -5429,6 +5533,8 @@ function saveSettings() {
 function applyEditorSettings() {
     document.documentElement.style.setProperty('--indent-size', state.settings.indent || 4);
     document.documentElement.style.setProperty('--editor-font-size', (state.settings.editorFontSize || 13) + 'px');
+    const hiSel = document.getElementById('highlight-color-select');
+    if (hiSel && state.settings.highlightColor) hiSel.value = state.settings.highlightColor;
 }
 async function exportAllData() {
     const data = JSON.stringify({
@@ -5520,7 +5626,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Escape') {
             document.querySelectorAll('.popup-overlay.active').forEach(p => p.classList.remove('active'));
         }
-        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        // Ctrl+Shift+S: スクショ（即保存）— Ctrl+Sの保存より先に判定
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            quickScreenshotSave();
+            return;
+        }
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 's' || e.key === 'S')) {
             e.preventDefault();
             manualSave();
         }
@@ -5533,6 +5645,27 @@ window.addEventListener('DOMContentLoaded', async () => {
             exportCurrentMemo();
         }
     });
+
+    // 議事メモ内のリンクは「クリックで開く」（contenteditable下でも単独クリックで遷移）
+    const editorLinkEl = document.getElementById('editor');
+    if (editorLinkEl) {
+        editorLinkEl.addEventListener('click', (e) => {
+            const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+            if (!a || !editorLinkEl.contains(a)) return;
+            // 編集を妨げないため、Alt押下時は開かず通常編集
+            if (e.altKey) return;
+            const href = a.getAttribute('href');
+            if (!href) return;
+            e.preventDefault();
+            try {
+                window.open(href, '_blank', 'noopener,noreferrer');
+            } catch (err) {
+                window.location.href = href;
+            }
+        });
+        // ホバー時にカーソルがリンク用になるよう補助
+        editorLinkEl.style.setProperty('--editor-link-cursor', 'pointer');
+    }
 
     // WBS/ガントの左右スプリッタ
     const splitter = document.getElementById('splitter');
