@@ -589,15 +589,19 @@ html, body {
     padding: 8px; border-bottom: 1px solid var(--border); font-size: 12px;
 }
 .tasks-table tbody tr:hover { background: rgba(255,255,255,0.03); }
-.tasks-table input, .tasks-table select {
+.tasks-table input, .tasks-table select, .tasks-table textarea {
     background: transparent; border: 1px solid transparent; color: var(--text);
     padding: 3px 6px; border-radius: 3px; font-family: inherit; font-size: 12px;
-    width: 100%;
+    width: 100%; box-sizing: border-box;
 }
-.tasks-table input:focus, .tasks-table select:focus {
+.tasks-table textarea.task-text-input {
+    resize: none; overflow: hidden; min-height: 28px; line-height: 1.45;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.tasks-table input:focus, .tasks-table select:focus, .tasks-table textarea:focus {
     border-color: var(--accent); background: var(--panel); outline: none;
 }
-.tasks-table input::placeholder { color: var(--text-dim); font-style: italic; }
+.tasks-table input::placeholder, .tasks-table textarea::placeholder { color: var(--text-dim); font-style: italic; }
 .tasks-table select option { background: var(--panel); color: var(--text); }
 .status-badge {
     display: inline-block; padding: 2px 8px; border-radius: 10px;
@@ -616,13 +620,13 @@ html, body {
 
 /* ====== WBSタブ（旧・統合タブで再利用） ====== */
 .wbs-node {
-    padding: 0 8px;
-    height: 32px;
+    padding: 5px 8px;
+    min-height: 32px;
     margin: 0;
     background: var(--panel); border-left: 3px solid var(--accent);
     border-bottom: 1px solid var(--border);
     border-radius: 0;
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: flex-start; gap: 6px;
     cursor: move; box-sizing: border-box;
     padding-left: calc(8px + var(--depth, 0) * 18px);
 }
@@ -631,7 +635,7 @@ html, body {
 .wbs-node .toggle {
     width: 14px; cursor: pointer; color: var(--text-dim); font-size: 10px;
 }
-.wbs-node .title { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wbs-node .title { flex: 1; font-size: 12px; overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
 .wbs-node .meta-info { font-size: 10px; color: var(--text-dim); margin-right: 6px; white-space: nowrap; }
 .wbs-node .controls { display: none; gap: 3px; }
 .wbs-node:hover .controls { display: flex; }
@@ -910,6 +914,132 @@ html, body {
 }
 .recording-item button:hover { color: var(--accent); border-color: var(--accent); }
 
+/* ====== 追加要件対応: テキストWBS/ToDo・メディア・ゴミ箱 ====== */
+.text-workbench {
+    margin: 10px 20px; padding: 10px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 6px;
+}
+.text-workbench-header {
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+    margin-bottom:8px; color:var(--text-dim); font-size:11px; flex-wrap:wrap;
+}
+.input-location-hint {
+    margin: 6px 0 8px; padding: 8px 10px; border: 1px solid var(--accent);
+    border-radius: 4px; background: rgba(74,158,255,0.10); color: var(--text);
+    font-size: 12px; line-height: 1.6;
+}
+.input-location-hint strong { color: var(--accent); }
+.structured-row.header + .structured-row .structured-cell { background: rgba(74,158,255,0.05); }
+.text-workbench > textarea {
+    width:100%; min-height:120px; resize:vertical; box-sizing:border-box;
+    background:var(--bg); color:var(--text); border:1px solid var(--border);
+    border-radius:4px; padding:8px; font-family:Consolas, 'Yu Gothic UI', monospace;
+    font-size:12px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; tab-size:4;
+}
+.text-workbench > textarea.text-source {
+    display:none;
+    min-height:0;
+    margin-top:0;
+    font-size:13px;
+    line-height:1.6;
+    cursor:text;
+    caret-color:var(--text);
+}
+.text-workbench textarea.text-source:focus {
+    background:rgba(74,158,255,0.08);
+    border-color:var(--accent);
+    outline:none;
+    box-shadow:0 0 0 1px var(--accent);
+}
+.structured-editor { margin-top:8px; }
+.structured-editor {
+    width:100%; max-height:420px; overflow:auto; box-sizing:border-box;
+    background:var(--bg); color:var(--text); border:1px solid var(--border);
+    border-radius:4px; font-family:Consolas, 'Yu Gothic UI', monospace; font-size:12px;
+}
+.structured-row { display:grid; min-height:32px; border-bottom:1px solid var(--border); }
+.structured-row:last-child { border-bottom:none; }
+.structured-row.header { position:sticky; top:0; z-index:2; background:var(--panel); color:var(--text-dim); font-weight:600; }
+.structured-cell {
+    min-width:0; min-height:32px; padding:6px 8px; border:0; border-right:1px solid var(--border);
+    white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.55; outline:none;
+    cursor:text; user-select:text; -webkit-user-select:text; caret-color:var(--text);
+    background:transparent; color:inherit; font:inherit; box-sizing:border-box; width:100%;
+}
+textarea.structured-cell {
+    display:block; resize:none; overflow:hidden; height:32px;
+}
+.structured-cell:last-child { border-right:none; }
+.structured-cell:focus { background:rgba(74,158,255,0.14); box-shadow:inset 0 0 0 1px var(--accent); }
+.structured-cell::placeholder { color:var(--text-dim); font-style:italic; opacity:1; }
+.structured-cell.placeholder:empty::before { content:attr(data-placeholder); color:var(--text-dim); font-style:italic; pointer-events:none; }
+.wbs-structured-editor .structured-row { grid-template-columns:minmax(320px, 1.5fr) 130px 120px 120px; }
+.todo-structured-editor .structured-row { grid-template-columns:var(--todo-columns, minmax(260px,1.5fr) 120px 120px 120px 100px 160px 160px); }
+.wbs-structured-editor .wbs-title-cell { padding-left:calc(8px + var(--wbs-level, 0) * 24px); }
+.wbs-structured-editor .structured-row[data-level="6"] .wbs-title-cell { border-left:2px solid var(--warning); }
+.structured-editor-note { margin-top:6px; color:var(--text-dim); font-size:10px; line-height:1.5; }
+.media-thumb { max-width: 600px; max-height: 360px; display:block; margin:6px 0; border:1px solid var(--border); border-radius:4px; }
+.memo-media { margin:6px 0; padding:6px; border:1px solid var(--border); border-radius:4px; background:var(--panel); }
+.memo-media audio, .memo-media video { max-width:100%; width: min(620px, 100%); display:block; margin-top:4px; }
+.memo-media .media-caption { font-size:11px; color:var(--text-dim); margin-bottom:3px; }
+.trash-list { max-height: 360px; overflow:auto; border:1px solid var(--border); border-radius:4px; background:var(--bg); }
+.trash-item { display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px solid var(--border); font-size:12px; }
+.trash-item:last-child { border-bottom:none; }
+.trash-item-title { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tree-item.drag-over, .memo-item.dragging { outline: 1px dashed var(--accent); }
+.memo-item .memo-actions { display:none; float:right; }
+.memo-item:hover .memo-actions { display:inline-flex; gap:4px; }
+.memo-item .memo-actions button { background:transparent; border:1px solid var(--border); color:var(--text-dim); cursor:pointer; border-radius:2px; font-size:10px; }
+.memo-item .memo-actions button:hover { color:var(--danger); border-color:var(--danger); }
+.shortcut-grid { display:grid; grid-template-columns: 1fr 140px; gap:6px; align-items:center; font-size:12px; }
+.shortcut-grid input { font-family:Consolas, monospace; }
+
+
+
+/* ====== 修正: WBS/ToDo入力欄を本物のtable + textareaにする ====== */
+.structured-editor {
+    width:100%; max-height:420px; overflow:auto; box-sizing:border-box;
+    background:var(--bg); color:var(--text); border:1px solid var(--border);
+    border-radius:4px; font-family:Consolas, 'Yu Gothic UI', monospace; font-size:12px;
+}
+.structured-table {
+    width:100%; border-collapse:collapse; table-layout:fixed;
+}
+.structured-table th,
+.structured-table td {
+    border-right:1px solid var(--border); border-bottom:1px solid var(--border);
+    padding:0; vertical-align:top; background:transparent;
+}
+.structured-table tr:last-child td { border-bottom:none; }
+.structured-table th:last-child,
+.structured-table td:last-child { border-right:none; }
+.structured-table thead th {
+    position:sticky; top:0; z-index:2; background:var(--panel); color:var(--text-dim); font-weight:600;
+}
+.structured-input {
+    display:block; width:100%; min-height:34px; height:34px; box-sizing:border-box;
+    border:0; outline:none; padding:7px 8px; resize:none; overflow:hidden;
+    background:transparent; color:var(--text); font:inherit; line-height:1.55;
+    white-space:pre-wrap; overflow-wrap:anywhere; cursor:text; caret-color:var(--text);
+}
+.structured-input:focus {
+    background:rgba(74,158,255,0.14); box-shadow:inset 0 0 0 1px var(--accent);
+}
+.structured-input::placeholder { color:var(--text-dim); font-style:italic; opacity:1; }
+.todo-structured-editor .todo-table col:first-child { width:26%; }
+.todo-structured-editor .todo-table col { width:12%; }
+.wbs-structured-editor .wbs-table col:nth-child(1) { width:48%; }
+.wbs-structured-editor .wbs-table col:nth-child(2) { width:18%; }
+.wbs-structured-editor .wbs-table col:nth-child(3) { width:17%; }
+.wbs-structured-editor .wbs-table col:nth-child(4) { width:17%; }
+.wbs-structured-editor .structured-row[data-level="0"] .wbs-title-input { padding-left:8px; }
+.wbs-structured-editor .structured-row[data-level="1"] .wbs-title-input { padding-left:32px; }
+.wbs-structured-editor .structured-row[data-level="2"] .wbs-title-input { padding-left:56px; }
+.wbs-structured-editor .structured-row[data-level="3"] .wbs-title-input { padding-left:80px; }
+.wbs-structured-editor .structured-row[data-level="4"] .wbs-title-input { padding-left:104px; }
+.wbs-structured-editor .structured-row[data-level="5"] .wbs-title-input { padding-left:128px; }
+.wbs-structured-editor .structured-row[data-level="6"] .wbs-title-input { padding-left:152px; border-left:2px solid var(--warning); }
+
 </style>
 </head>
 <body>
@@ -961,6 +1091,7 @@ html, body {
             <h3>📝 議事メモ</h3>
             <div style="display:flex;gap:4px;">
                 <button class="new-btn" onclick="newMemo()" style="background:var(--accent);color:#fff;border:none;padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;">+ 新規</button>
+                <button class="collapse-btn" onclick="showTrashPopup()" title="ゴミ箱">🗑</button>
                 <button class="collapse-btn" onclick="toggleMemoList()" title="折りたたみ" id="memo-list-toggle">«</button>
             </div>
         </div>
@@ -978,7 +1109,10 @@ html, body {
         <div class="toolbar">
             <button class="tool-btn" onclick="execCmd('bold')" title="太字 (Ctrl+B)"><b>B</b></button>
             <button class="tool-btn" onclick="execCmd('italic')" title="斜体 (Ctrl+I)"><i>I</i></button>
+            <button class="tool-btn" onclick="execCmd('undo')" title="Undo (Ctrl+Z)">↶ Undo</button>
+            <button class="tool-btn" onclick="execCmd('redo')" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">↷ Redo</button>
             <button class="tool-btn" onclick="highlight()" title="蛍光ペン">🖍 蛍光</button>
+            <button class="tool-btn" onclick="clearHighlight()" title="蛍光ペンを無色化">無色</button>
             <button class="tool-btn" onclick="insertLink()" title="リンク">🔗 リンク</button>
             <div class="tool-divider"></div>
             <button class="tool-btn" onclick="insertHeading(1)">H1</button>
@@ -990,7 +1124,10 @@ html, body {
             <button class="tool-btn" onclick="insertTable()" title="3×3の表を挿入。表内のセルを右クリック/長押しで操作メニュー">📊 表挿入</button>
             <button class="tool-btn" onclick="insertDate()" title="今日の日付を挿入（書式は設定で変更可）">📅 日付</button>
             <button class="tool-btn" onclick="insertDateTime()" title="現在日時を挿入">🕒 日時</button>
-            <button class="tool-btn" onclick="startCapture()">📷 キャプチャ</button>
+            <button class="tool-btn" onclick="document.getElementById('media-file-input').click()" title="画像・動画・音声を貼り付け">🖼 メディア</button>
+            <input type="file" id="media-file-input" accept="image/*,audio/*,video/*" multiple style="display:none" onchange="handleMediaFileInput(event)">
+            <button class="tool-btn" onclick="quickScreenshotSave()" title="ワンクリックでスクリーンショット保存">📸 即保存</button>
+            <button class="tool-btn" onclick="startCapture()">📷 範囲キャプチャ</button>
             <button class="tool-btn" id="btn-record" onclick="toggleRecording()">🎙 録音開始</button>
             <div class="tool-divider"></div>
             <button class="tool-btn" onclick="addTaskFromSelection()" title="Ctrl+Shift+T">✓ タスク化</button>
@@ -1000,7 +1137,9 @@ html, body {
         <div id="editor" contenteditable="true"
              oninput="onEditorInput()"
              onkeydown="onEditorKeydown(event)"
-             onpaste="onEditorPaste(event)"></div>
+             onpaste="onEditorPaste(event)"
+             ondragover="onEditorDragOver(event)"
+             ondrop="onEditorDrop(event)"></div>
     </div>
 </div>
 
@@ -1015,10 +1154,24 @@ html, body {
                 <span>進行中: <b id="stat-doing">0</b></span>
                 <span>完了: <b id="stat-done">0</b></span>
             </div>
+            <button class="tool-btn" onclick="addTodoColumn()">+ カラム</button>
+            <button class="tool-btn" onclick="refreshTodoText()">📝 テキスト反映</button>
+            <button class="tool-btn" onclick="applyTodoText()">⬆ テキストから更新</button>
+            <button class="tool-btn" onclick="exportTodoText()">📄 TXT</button>
             <button class="tool-btn" onclick="exportTasksCSV()">📥 CSVエクスポート</button>
             <button class="tool-btn" onclick="document.getElementById('csv-import-tasks').click()">📤 CSVインポート</button>
             <input type="file" id="csv-import-tasks" accept=".csv" style="display:none" onchange="importTasksCSV(event)">
         </div>
+    </div>
+    <div class="text-workbench">
+        <div class="text-workbench-header">
+            <b>ToDo テキスト入力</b>
+            <span>1行1ToDo。カラムはTab区切り。ヘッダー行を書き換えてカラム追加も可能。</span>
+        </div>
+        <div class="input-location-hint"><strong>入力場所：</strong>下の表に直接入力します。1行目は見出しです。最初の空行の「内容」セルから入力します。列移動はTabです。</div>
+        <textarea id="todo-textarea" class="text-source" onkeydown="handleTextareaTab(event)" oninput="onTodoSourceInput()" placeholder="内容\t担当者\t期限\tステータス\t優先度\t関連WBS\t関連議事録"></textarea>
+        <div id="todo-structured-editor" class="structured-editor todo-structured-editor" aria-label="ToDo structured editor"></div>
+        <div class="structured-editor-note">下の表が入力欄です。ToDoは1行1件、列はTab区切りです。TXT出力では1件1行を維持します。</div>
     </div>
     <div class="tasks-table-wrap">
         <table class="tasks-table">
@@ -1036,7 +1189,6 @@ html, body {
             </thead>
             <tbody id="tasks-tbody"></tbody>
         </table>
-        <button class="tool-btn" onclick="addBlankTask()" style="margin-top:10px;">+ TODO追加（その場で入力）</button>
         <div style="color:var(--text-dim);font-size:11px;margin-top:6px;">
             ヒント：ここで作ったタスクは「親タスク」列で他タスクの内訳に紐付け可能。<br>
             「WBS」タブから直接作成・編集することもできます。
@@ -1049,18 +1201,30 @@ html, body {
     <div class="wbsgantt-header">
         <h2 style="margin:0;font-size:16px;">🏗 WBS（左：階層） / ガントチャート（右：時系列）</h2>
         <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-            <button class="tool-btn" onclick="addWBSRoot()">+ WBSタスク追加（その場で入力）</button>
             <div class="gantt-scale-btns">
                 <button class="gantt-scale-btn" onclick="setGanttScale('d')" data-scale="d">日</button>
                 <button class="gantt-scale-btn active" onclick="setGanttScale('w')" data-scale="w">週</button>
                 <button class="gantt-scale-btn" onclick="setGanttScale('m')" data-scale="m">月</button>
             </div>
+            <button class="tool-btn" onclick="refreshWBSText()">📝 テキスト反映</button>
+            <button class="tool-btn" onclick="applyWBSText()">⬆ テキストから更新</button>
+            <button class="tool-btn" onclick="exportWBSText()">📄 TXT</button>
             <button class="tool-btn" onclick="exportTasksCSV()">📥 CSV</button>
             <button class="tool-btn" onclick="document.getElementById('csv-import-wbs').click()">📤 CSV読込</button>
             <input type="file" id="csv-import-wbs" accept=".csv" style="display:none" onchange="importTasksCSV(event)">
             <button class="tool-btn" onclick="exportToPPTX()">📤 PowerPoint出力</button>
             <span style="color:var(--text-dim);font-size:11px;">Enter=次の同階層 / Tab=子追加 / Shift+Tab=親階層 / Esc=取消</span>
         </div>
+    </div>
+    <div class="text-workbench">
+        <div class="text-workbench-header">
+            <b>WBS テキスト入力</b>
+            <span>行頭Tabで階層化。L7まで。列は「タスク名 / 期日 / 担当者 / ステータス」をTab区切り。</span>
+        </div>
+        <div class="input-location-hint"><strong>入力場所：</strong>下の表に直接入力します。最初の空行の「項目名」セルから入力します。Tabで期日セルへ移動、行頭では階層変更です。</div>
+        <textarea id="wbs-textarea" class="text-source" onkeydown="handleTextareaTab(event)" oninput="onWBSSourceInput()" placeholder="要件整理\t2026-05-01\n\t画面仕様整理\t2026-05-02"></textarea>
+        <div id="wbs-structured-editor" class="structured-editor wbs-structured-editor" aria-label="WBS structured editor"></div>
+        <div class="structured-editor-note">下の表が入力欄です。WBSは1行1項目、階層は行頭Tab、期日は項目名の後ろにTab区切りで入力します。TXT出力では1項目1行を維持します。</div>
     </div>
     <div class="wbsgantt-content">
         <div class="wbs-pane" id="wbs-pane">
@@ -1205,6 +1369,19 @@ html, body {
             </div>
         </div>
         <div class="form-row">
+            <label>⌨ ショートカットキー</label>
+            <div class="shortcut-grid">
+                <span>蛍光ペン無色化</span><input type="text" id="shortcut-clear-highlight" placeholder="Ctrl+Shift+H">
+                <span>議事録TXT出力</span><input type="text" id="shortcut-export-memo" placeholder="Ctrl+E">
+            </div>
+        </div>
+        <div class="form-row">
+            <label>自動バックアップ</label>
+            <div style="font-size:11px;color:var(--text-dim);line-height:1.6;">3時間毎に <code>backup/</code> へJSONを保存し、1週間を超えたバックアップは削除します。</div>
+            <button class="btn-secondary" onclick="runBackupNow(true)">今すぐバックアップ作成</button>
+            <span id="backup-status" style="font-size:11px;color:var(--text-dim);margin-left:8px;"></span>
+        </div>
+        <div class="form-row">
             <label>データのバックアップ・復元（任意のファイル）</label>
             <div style="display:flex; gap:6px;">
                 <button class="btn-secondary" onclick="exportAllData()">📥 JSONエクスポート</button>
@@ -1266,6 +1443,20 @@ html, body {
     </div>
 </div>
 
+
+<!-- ============ ゴミ箱ポップアップ ============ -->
+<div class="popup-overlay" id="trash-popup">
+    <div class="popup" style="width:560px;max-width:90vw;">
+        <h3>🗑 議事録ゴミ箱</h3>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">削除した議事録は1週間後に完全削除されます。</div>
+        <div id="trash-list" class="trash-list"></div>
+        <div class="actions">
+            <button class="btn-secondary" onclick="purgeTrash(true)">期限切れを完全削除</button>
+            <button class="btn-primary" onclick="document.getElementById('trash-popup').classList.remove('active')">閉じる</button>
+        </div>
+    </div>
+</div>
+
 <!-- ============ 表ツールバー（フローティング） ============ -->
 <div class="table-toolbar" id="table-toolbar">
     <button onclick="tableAddRow('above')" title="上に行追加">⬆ +行</button>
@@ -1316,7 +1507,7 @@ let state = {
     folders: [],     // [{id, name, parent, expanded}]
     memos: [],       // [{id, folderId, title, body, tags:[], created, updated}]
     tasks: [],       // [{id, title, date, owner, status, memoId, wbsId, parentId, order}]
-    settings: { indent: 4 },
+    settings: { indent: 4, todoColumns: DEFAULT_TODO_COLUMNS, shortcuts: { clearHighlight: 'Ctrl+Shift+H', exportMemo: 'Ctrl+E' } },
     selectedFolderId: null,
     selectedMemoId: null,
     activeTagFilters: [],
@@ -1324,6 +1515,7 @@ let state = {
     editingWbsId: null,
     ganttScale: 'w',  // d/w/m
     recordings: [],   // [{id, blobUrl, name, date, duration}]
+    trashMemos: [],    // [{...memo, deletedAt, originalFolderId}]
 };
 let mediaRecorder = null;
 let recordChunks = [];
@@ -1332,16 +1524,39 @@ let recordTimerInterval = null;
 let captureStream = null;
 let lastSelectionRange = null;
 
+const MAX_WBS_LEVEL = 7;
+const TRASH_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const BACKUP_INTERVAL_MS = 3 * 60 * 60 * 1000;
+const ASSET_IMAGE_DIR = 'assets/images';
+const ASSET_MEDIA_DIR = 'assets/media';
+const OUTPUT_DIR = 'output';
+const BACKUP_DIR = 'backup';
+const DEFAULT_TODO_COLUMNS = [
+    { key: 'title', label: '内容', type: 'text' },
+    { key: 'owner', label: '担当者', type: 'text' },
+    { key: 'date', label: '期限', type: 'date' },
+    { key: 'status', label: 'ステータス', type: 'select', options: ['未着手','進行中','完了','保留'] },
+    { key: 'priority', label: '優先度', type: 'select', options: ['高','中','低'] },
+    { key: 'relatedWbs', label: '関連WBS', type: 'text' },
+    { key: 'relatedMemo', label: '関連議事録', type: 'text' },
+];
+
 // ========== 永続化 ==========
-function saveState() {
-    const persisted = {
+function buildPersistedData() {
+    ensureStateShape();
+    return {
         folders: state.folders,
         memos: state.memos,
         tasks: state.tasks,
         settings: state.settings,
+        trashMemos: state.trashMemos,
         // recordingsはBlobURLなので簡易には保存しない（メタのみ）
-        recordings: state.recordings.map(r => ({ id:r.id, name:r.name, date:r.date, duration:r.duration }))
+        recordings: state.recordings.map(r => ({ id:r.id, name:r.name, date:r.date, duration:r.duration, filename:r.filename || r.name }))
     };
+}
+function saveState() {
+    ensureStateShape();
+    const persisted = buildPersistedData();
     try {
         localStorage.setItem(STORE_KEY, JSON.stringify(persisted));
     } catch (e) {
@@ -1356,11 +1571,8 @@ function loadState() {
         if (!raw) return seedInitialData();
         const data = JSON.parse(raw);
         Object.assign(state, data);
-        if (!state.folders) state.folders = [];
-        if (!state.memos) state.memos = [];
-        if (!state.tasks) state.tasks = [];
-        if (!state.settings) state.settings = { indent: 4 };
-        if (!state.recordings) state.recordings = [];
+        ensureStateShape();
+        purgeTrash(false);
     } catch (e) {
         console.error(e);
         seedInitialData();
@@ -1371,8 +1583,39 @@ function seedInitialData() {
     state.folders = [{ id: rootId, name: '全般', parent: null, expanded: true }];
     state.memos = [];
     state.tasks = [];
+    state.trashMemos = [];
     state.selectedFolderId = rootId;
+    ensureStateShape();
     saveState();
+}
+function ensureStateShape() {
+    if (!state.folders) state.folders = [];
+    if (!state.memos) state.memos = [];
+    if (!state.tasks) state.tasks = [];
+    if (!state.trashMemos) state.trashMemos = [];
+    if (!state.settings) state.settings = {};
+    if (!state.recordings) state.recordings = [];
+    state.settings.indent = state.settings.indent || 4;
+    state.settings.todoColumns = normalizeTodoColumns(state.settings.todoColumns);
+    state.settings.shortcuts = Object.assign({ clearHighlight: 'Ctrl+Shift+H', exportMemo: 'Ctrl+E' }, state.settings.shortcuts || {});
+    const fallbackFolderId = state.selectedFolderId || state.folders[0]?.id || null;
+    state.tasks.forEach(t => {
+        if (!t.folderId) t.folderId = fallbackFolderId;
+        if (!t.status) t.status = '未着手';
+        if (!t.extra) t.extra = {};
+    });
+    state.memos.forEach(m => {
+        if (!m.folderId) m.folderId = fallbackFolderId;
+        if (!m.tags) m.tags = [];
+    });
+}
+function normalizeTodoColumns(cols) {
+    const byKey = new Map();
+    DEFAULT_TODO_COLUMNS.forEach(c => byKey.set(c.key, Object.assign({}, c)));
+    (cols || []).forEach(c => {
+        if (c && c.key) byKey.set(c.key, Object.assign({}, c));
+    });
+    return Array.from(byKey.values());
 }
 // ========== File System Access API（ワークフォルダ） ==========
 // 一度フォルダを選択すれば、以降ダイアログなしで読み書き可能
@@ -1489,13 +1732,108 @@ async function readFromWorkFolder(filename) {
         return null; // 存在しない or 失敗
     }
 }
+
+async function getDirectoryByPath(path, create = true) {
+    if (!workFolderHandle) return null;
+    const ok = await fsEnsurePermission(workFolderHandle, 'readwrite');
+    if (!ok) return null;
+    const parts = String(path || '').split('/').filter(Boolean);
+    let dir = workFolderHandle;
+    for (const part of parts) {
+        dir = await dir.getDirectoryHandle(part, { create });
+    }
+    return dir;
+}
+async function writeToWorkFolderPath(path, content) {
+    if (!workFolderHandle) return false;
+    try {
+        const parts = String(path).split('/').filter(Boolean);
+        const filename = parts.pop();
+        const dir = await getDirectoryByPath(parts.join('/'), true);
+        if (!dir || !filename) return false;
+        const fileHandle = await dir.getFileHandle(filename, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(content);
+        await writable.close();
+        return true;
+    } catch (e) {
+        toast('書込失敗(' + path + '): ' + e.message, 'error');
+        return false;
+    }
+}
+async function writeBlobToWorkFolderPath(path, blob) {
+    return writeToWorkFolderPath(path, blob);
+}
+async function readFileFromWorkFolderPath(path) {
+    if (!workFolderHandle) return null;
+    try {
+        const parts = String(path).split('/').filter(Boolean);
+        const filename = parts.pop();
+        let dir = workFolderHandle;
+        const ok = await fsEnsurePermission(workFolderHandle, 'read');
+        if (!ok) return null;
+        for (const part of parts) {
+            dir = await dir.getDirectoryHandle(part);
+        }
+        const fh = await dir.getFileHandle(filename);
+        return await fh.getFile();
+    } catch {
+        return null;
+    }
+}
+async function purgeOldBackups() {
+    if (!workFolderHandle || !workFolderHandle.getDirectoryHandle) return;
+    try {
+        const dir = await getDirectoryByPath(BACKUP_DIR, true);
+        if (!dir || !dir.entries) return;
+        const cutoff = Date.now() - TRASH_RETENTION_MS;
+        for await (const [name, handle] of dir.entries()) {
+            if (handle.kind !== 'file') continue;
+            const m = name.match(/^cockpit_backup_(\d{8})_(\d{6})\.json$/);
+            if (!m) continue;
+            const stamp = m[1] + m[2];
+            const dt = new Date(
+                Number(stamp.slice(0,4)),
+                Number(stamp.slice(4,6)) - 1,
+                Number(stamp.slice(6,8)),
+                Number(stamp.slice(8,10)),
+                Number(stamp.slice(10,12)),
+                Number(stamp.slice(12,14))
+            );
+            if (dt.getTime() < cutoff) await dir.removeEntry(name);
+        }
+    } catch (e) {
+        console.warn('古いバックアップ削除失敗:', e);
+    }
+}
+async function runBackupNow(force = false) {
+    if (!workFolderHandle) {
+        toast('バックアップにはワークフォルダ設定が必要です', 'warning');
+        return false;
+    }
+    const last = Number(state.settings.lastBackupAt || 0);
+    if (!force && last && Date.now() - last < BACKUP_INTERVAL_MS) return false;
+    const stamp = formatTemplate('{yyyy}{mm}{dd}_{hh}{nn}{ss}');
+    const path = `${BACKUP_DIR}/cockpit_backup_${stamp}.json`;
+    const ok = await writeToWorkFolderPath(path, JSON.stringify(buildPersistedData(), null, 2));
+    if (ok) {
+        state.settings.lastBackupAt = Date.now();
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(buildPersistedData())); } catch {}
+        await purgeOldBackups();
+        const el = document.getElementById('backup-status');
+        if (el) el.textContent = `最終: ${new Date().toLocaleString('ja-JP')}`;
+        toast(`バックアップ作成: ${path}`, 'success');
+        return true;
+    }
+    return false;
+}
 function updateWorkFolderUI() {
     const status = document.getElementById('workfolder-status');
     if (status) {
         if (workFolderHandle) {
             status.innerHTML = `現在の保存先：<b style="color:var(--accent)">📂 ${escapeHtml(workFolderHandle.name)}</b>${autoSaveEnabled ? ' <span style="color:var(--success)">● 自動保存ON</span>' : ''}`;
         } else {
-            status.innerHTML = '<span style="color:var(--text-dim)">未設定（CSVエクスポートはダウンロードフォルダへ）</span>';
+            status.innerHTML = '<span style="color:var(--text-dim)">未設定（出力はダウンロード扱い）</span>';
         }
     }
     const autoSaveCheck = document.getElementById('auto-save-check');
@@ -1529,11 +1867,17 @@ async function loadFromWorkFolder() {
         state.memos = data.memos || [];
         state.tasks = data.tasks || [];
         state.settings = data.settings || { indent: 4 };
+        state.trashMemos = data.trashMemos || [];
+        ensureStateShape();
+        purgeTrash(false);
         if (state.folders.length && !state.folders.find(f => f.id === state.selectedFolderId)) {
             state.selectedFolderId = state.folders[0].id;
         }
         saveState();
         renderAll();
+
+    setInterval(() => runBackupNow(false), 60 * 1000);
+    runBackupNow(false);
         toast('ワークフォルダから読込みました', 'success');
     } catch (e) { toast('読込失敗: ' + e.message, 'error'); }
 }
@@ -1548,7 +1892,7 @@ async function autoSaveToWorkFolder() {
             settings: state.settings,
         }, null, 2);
         const ok1 = await writeToWorkFolder('cockpit_data.json', json);
-        const ok2 = await writeToWorkFolder('cockpit_tasks.csv', '\ufeff' + buildTasksCSV());
+        const ok2 = await writeToWorkFolderPath(`${OUTPUT_DIR}/cockpit_tasks.csv`, '\ufeff' + buildTasksCSV(state.tasks));
         let ok3 = true;
         // 議事メモも個別ファイルとして書き出し
         if (state.settings.autoSaveMemos) {
@@ -1556,10 +1900,11 @@ async function autoSaveToWorkFolder() {
                 const filename = sanitizeFilename(memo.title || getDefaultMemoTitle());
                 if (!filename) continue;
                 const { content } = convertMemoBody(memo);
-                const ok = await writeToWorkFolder(filename, content);
+                const ok = await writeToWorkFolderPath(`${OUTPUT_DIR}/${filename}`, content);
                 if (!ok) ok3 = false;
             }
         }
+        await runBackupNow(false);
         if (ok1 && ok2 && ok3) setSaveStatus('saved');
         else setSaveStatus('error');
     } catch (e) {
@@ -1593,18 +1938,18 @@ function scheduleAutoSave() {
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(autoSaveToWorkFolder, 1500); // 1.5秒debounce
 }
-function buildTasksCSV() {
-    const headers = ['id', 'title', 'parentId', 'parentTitle', 'startDate', 'endDate', 'owner', 'status', 'order', 'memoTitle'];
+function buildTasksCSV(tasks = getTasksForFolder()) {
+    const headers = ['id', 'folderId', 'title', 'parentId', 'parentTitle', 'startDate', 'endDate', 'owner', 'status', 'priority', 'relatedWbs', 'relatedMemo', 'order', 'memoTitle'];
     const rows = [headers];
-    const flat = flattenWBS();
+    const flat = flattenWBS(tasks);
     flat.forEach(it => {
         const t = it.task;
         const parent = t.parentId ? state.tasks.find(x => x.id === t.parentId) : null;
         const memo = t.memoId ? state.memos.find(m => m.id === t.memoId) : null;
         rows.push([
-            t.id, t.title || '', t.parentId || '',
+            t.id, t.folderId || '', t.title || '', t.parentId || '',
             parent ? (parent.title || '') : '',
-            t.startDate || '', t.date || '', t.owner || '', t.status || '',
+            t.startDate || '', t.date || '', t.owner || '', t.status || '', t.priority || '', t.relatedWbs || '', t.relatedMemo || '',
             t.order != null ? t.order : '',
             memo ? (memo.title || '') : ''
         ]);
@@ -1613,6 +1958,67 @@ function buildTasksCSV() {
 }
 
 function uid() { return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8); }
+
+function getActiveFolderId() {
+    if (!state.selectedFolderId && state.folders.length) state.selectedFolderId = state.folders[0].id;
+    return state.selectedFolderId || state.folders[0]?.id || null;
+}
+function getTasksForFolder(folderId = getActiveFolderId()) {
+    return state.tasks.filter(t => (t.folderId || folderId) === folderId);
+}
+function getTodoTasksForFolder(folderId = getActiveFolderId()) {
+    const folderTasks = getTasksForFolder(folderId);
+    const hasTypedTodo = folderTasks.some(t => t.kind === 'todo');
+    if (hasTypedTodo) return folderTasks.filter(t => t.kind === 'todo');
+    return folderTasks.filter(t => t.kind !== 'wbs');
+}
+function getWBSTasksForFolder(folderId = getActiveFolderId()) {
+    const folderTasks = getTasksForFolder(folderId);
+    const hasTypedWbs = folderTasks.some(t => t.kind === 'wbs');
+    if (hasTypedWbs) return folderTasks.filter(t => t.kind === 'wbs');
+    return folderTasks.filter(t => t.kind !== 'todo');
+}
+function getTaskDepth(taskId) {
+    let depth = 1;
+    let cur = state.tasks.find(t => t.id === taskId);
+    const seen = new Set();
+    while (cur && cur.parentId && !seen.has(cur.id)) {
+        seen.add(cur.id);
+        depth++;
+        cur = state.tasks.find(t => t.id === cur.parentId);
+    }
+    return depth;
+}
+function getSubtreeMaxDepth(taskId) {
+    const children = state.tasks.filter(t => t.parentId === taskId);
+    if (!children.length) return 1;
+    return 1 + Math.max(...children.map(c => getSubtreeMaxDepth(c.id)));
+}
+function canAssignParent(taskId, newParentId) {
+    if (!newParentId) return true;
+    if (taskId === newParentId || isAncestor(taskId, newParentId)) return false;
+    const parentDepth = getTaskDepth(newParentId);
+    const subtree = getSubtreeMaxDepth(taskId);
+    return parentDepth + subtree <= MAX_WBS_LEVEL;
+}
+function getActiveFolderName() {
+    const f = state.folders.find(x => x.id === getActiveFolderId());
+    return f ? f.name : '全般';
+}
+function makeSafeTimestamp() {
+    return formatTemplate('{yyyy}{mm}{dd}_{hh}{nn}{ss}');
+}
+function handleTextareaTab(e) {
+    if (e.key !== 'Tab') return;
+    e.preventDefault();
+    const el = e.target;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    el.value = el.value.slice(0, start) + '	' + el.value.slice(end);
+    el.selectionStart = el.selectionEnd = start + 1;
+    if (el.id === 'todo-textarea' && typeof onTodoSourceInput === 'function') onTodoSourceInput();
+    if (el.id === 'wbs-textarea' && typeof onWBSSourceInput === 'function') onWBSSourceInput();
+}
 
 // インライン編集中のWBSノードID
 let editingNodeId = null;
@@ -1657,7 +2063,7 @@ async function exportTasksCSV() {
     const flat = flattenWBS();
     // ワークフォルダ設定済みなら直接保存
     if (workFolderHandle) {
-        const ok = await writeToWorkFolder('cockpit_tasks.csv', '\ufeff' + csv);
+        const ok = await writeToWorkFolderPath(`${OUTPUT_DIR}/cockpit_tasks_${sanitizeFilename(getActiveFolderName())}.csv`, '\ufeff' + csv);
         if (ok) { toast(`${flat.length}件をワークフォルダに保存しました`, 'success'); return; }
     }
     // 従来のダウンロード
@@ -1665,7 +2071,7 @@ async function exportTasksCSV() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'cockpit_tasks_' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.download = 'cockpit_tasks_' + sanitizeFilename(getActiveFolderName()) + '_' + new Date().toISOString().slice(0, 10) + '.csv';
     a.click();
     URL.revokeObjectURL(url);
     toast(`${flat.length}件のタスクをCSVエクスポートしました`, 'success');
@@ -1698,6 +2104,10 @@ function processCSVImport(rawText) {
         const ownerIdx = idx('owner');
         const statusIdx = idx('status');
         const orderIdx = idx('order');
+        const folderIdx = idx('folderId');
+        const priorityIdx = idx('priority');
+        const relatedWbsIdx = idx('relatedWbs');
+        const relatedMemoIdx = idx('relatedMemo');
 
         const mode = confirm('OK = 既存タスクを全て置き換える\nキャンセル = 既存タスクに追加する');
 
@@ -1709,10 +2119,14 @@ function processCSVImport(rawText) {
                 id: (idIdx >= 0 && r[idIdx]) ? r[idIdx] : uid(),
                 title: r[titleIdx] || '',
                 parentId: (parentIdIdx >= 0 && r[parentIdIdx]) ? r[parentIdIdx] : null,
+                folderId: (folderIdx >= 0 && r[folderIdx]) ? r[folderIdx] : getActiveFolderId(),
                 startDate: startIdx >= 0 ? (r[startIdx] || '') : '',
                 date: endIdx >= 0 ? (r[endIdx] || '') : '',
                 owner: ownerIdx >= 0 ? (r[ownerIdx] || '') : '',
                 status: statusIdx >= 0 ? (r[statusIdx] || '未着手') : '未着手',
+                priority: priorityIdx >= 0 ? (r[priorityIdx] || '') : '',
+                relatedWbs: relatedWbsIdx >= 0 ? (r[relatedWbsIdx] || '') : '',
+                relatedMemo: relatedMemoIdx >= 0 ? (r[relatedMemoIdx] || '') : '',
                 order: (orderIdx >= 0 && r[orderIdx]) ? parseInt(r[orderIdx]) || i : i,
                 memoId: null,
                 wbsId: null
@@ -1764,12 +2178,12 @@ function buildParentTaskOptions(currentTaskId, selectedParentId) {
         const indent = '　'.repeat(depth) + (depth > 0 ? '└ ' : '');
         const sel = task.id === selectedParentId ? 'selected' : '';
         html += `<option value="${task.id}" ${sel}>${indent}${escapeHtml(task.title || '(無題)')}</option>`;
-        const children = state.tasks
+        const children = getTasksForFolder()
             .filter(c => c.parentId === task.id)
             .sort((a, b) => (a.order || 0) - (b.order || 0));
         children.forEach(c => recurse(c, depth + 1));
     }
-    const roots = state.tasks
+    const roots = getTasksForFolder()
         .filter(t => !t.parentId)
         .sort((a, b) => (a.order || 0) - (b.order || 0));
     roots.forEach(r => recurse(r, 0));
@@ -1792,8 +2206,8 @@ function showTab(tabId, btn) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
     if (btn) btn.classList.add('active');
-    if (tabId === 'tab-tasks') renderTasks();
-    if (tabId === 'tab-wbsgantt') { renderWBS(); renderGantt(); }
+    if (tabId === 'tab-tasks') { renderTasks(); refreshTodoText(); focusFirstTodoInputCell(); }
+    if (tabId === 'tab-wbsgantt') { renderWBS(); renderGantt(); refreshWBSText(); focusFirstWBSInputCell(); }
 }
 
 // ========== フォルダツリー ==========
@@ -1837,7 +2251,39 @@ function renderFolderNode(folder, depth) {
     actions.append(addBtn, renBtn, delBtn);
 
     item.append(toggle, icon, label, actions);
-    item.onclick = () => { state.selectedFolderId = folder.id; renderFolderTree(); renderMemoList(); };
+    item.onclick = () => {
+        state.selectedFolderId = folder.id;
+        renderFolderTree(); renderMemoList(); refreshTodoText(); refreshWBSText();
+        if (document.getElementById('tab-tasks')?.classList.contains('active')) focusFirstTodoInputCell();
+        if (document.getElementById('tab-wbsgantt')?.classList.contains('active')) focusFirstWBSInputCell();
+    };
+    item.draggable = true;
+    item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('application/x-cockpit-folder', folder.id);
+    });
+    item.addEventListener('dragover', (e) => {
+        if (e.dataTransfer.types.includes('application/x-cockpit-memo') || e.dataTransfer.types.includes('application/x-cockpit-folder')) {
+            e.preventDefault();
+            item.classList.add('drag-over');
+        }
+    });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', (e) => {
+        item.classList.remove('drag-over');
+        const memoId = e.dataTransfer.getData('application/x-cockpit-memo');
+        const folderId = e.dataTransfer.getData('application/x-cockpit-folder');
+        if (memoId) {
+            const memo = state.memos.find(m => m.id === memoId);
+            if (memo) {
+                memo.folderId = folder.id;
+                memo.updated = Date.now();
+                saveState(); renderMemoList(); renderFolderTree();
+                toast('議事録を移動しました', 'success');
+            }
+        } else if (folderId && folderId !== folder.id) {
+            moveFolderToFolder(folderId, folder.id);
+        }
+    });
     wrap.appendChild(item);
 
     if (folder.expanded) {
@@ -1863,6 +2309,27 @@ function renameFolder(id) {
     if (!name) return;
     f.name = name;
     saveState(); renderFolderTree();
+}
+function isDescendantFolder(parentId, childId) {
+    let cur = state.folders.find(f => f.id === childId);
+    while (cur && cur.parent) {
+        if (cur.parent === parentId) return true;
+        cur = state.folders.find(f => f.id === cur.parent);
+    }
+    return false;
+}
+function moveFolderToFolder(folderId, targetParentId) {
+    const f = state.folders.find(x => x.id === folderId);
+    if (!f) return;
+    if (folderId === targetParentId || isDescendantFolder(folderId, targetParentId)) {
+        toast('フォルダを自分自身または子フォルダへは移動できません', 'error');
+        return;
+    }
+    f.parent = targetParentId;
+    const p = state.folders.find(x => x.id === targetParentId);
+    if (p) p.expanded = true;
+    saveState(); renderFolderTree();
+    toast('フォルダを移動しました', 'success');
 }
 function deleteFolder(id) {
     if (state.folders.length <= 1) { toast('最低1つのフォルダが必要です', 'warning'); return; }
@@ -1929,14 +2396,103 @@ function renderMemoList() {
         const date = new Date(m.updated || m.created || Date.now()).toLocaleDateString('ja-JP');
         const tags = (m.tags || []).map(t => `<span class="tag-mini">#${escapeHtml(t)}</span>`).join('');
         div.innerHTML = `
+            <span class="memo-actions"><button title="ゴミ箱へ移動" data-action="memo-delete">🗑</button></span>
             <div class="title">${escapeHtml(m.title || '無題')}</div>
             <div class="meta">${date}</div>
             <div class="tags">${tags}</div>
         `;
+        div.draggable = true;
+        div.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('application/x-cockpit-memo', m.id);
+            div.classList.add('dragging');
+        });
+        div.addEventListener('dragend', () => div.classList.remove('dragging'));
+        div.querySelector('[data-action="memo-delete"]').onclick = (e) => {
+            e.stopPropagation();
+            deleteMemoToTrash(m.id);
+        };
         div.onclick = () => loadMemo(m.id);
         container.appendChild(div);
     });
 }
+
+function deleteMemoToTrash(memoId) {
+    const memo = state.memos.find(m => m.id === memoId);
+    if (!memo) return;
+    if (!confirm('この議事録をゴミ箱へ移動しますか？')) return;
+    state.trashMemos = state.trashMemos || [];
+    state.trashMemos.push(Object.assign({}, memo, {
+        originalFolderId: memo.folderId,
+        deletedAt: Date.now()
+    }));
+    state.memos = state.memos.filter(m => m.id !== memoId);
+    if (state.selectedMemoId === memoId) {
+        state.selectedMemoId = null;
+        document.getElementById('memo-title').value = '';
+        document.getElementById('editor').innerHTML = '';
+    }
+    saveState(); renderMemoList(); renderTagFilter();
+    toast('議事録をゴミ箱へ移動しました', 'success');
+}
+function showTrashPopup() {
+    renderTrashList();
+    document.getElementById('trash-popup').classList.add('active');
+}
+function renderTrashList() {
+    const list = document.getElementById('trash-list');
+    if (!list) return;
+    purgeTrash(false);
+    list.innerHTML = '';
+    const trash = (state.trashMemos || []).slice().sort((a,b) => (b.deletedAt||0) - (a.deletedAt||0));
+    if (!trash.length) {
+        list.innerHTML = '<div style="padding:12px;color:var(--text-dim);font-size:12px;">ゴミ箱は空です</div>';
+        return;
+    }
+    trash.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'trash-item';
+        const deleted = m.deletedAt ? new Date(m.deletedAt).toLocaleString('ja-JP') : '';
+        div.innerHTML = `<div class="trash-item-title">${escapeHtml(m.title || '無題')}<br><span style="font-size:10px;color:var(--text-dim)">削除: ${deleted}</span></div>`;
+        const restoreBtn = document.createElement('button');
+        restoreBtn.className = 'btn-secondary';
+        restoreBtn.textContent = '復元';
+        restoreBtn.onclick = () => restoreTrashMemo(m.id);
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn-secondary';
+        delBtn.style.color = 'var(--danger)';
+        delBtn.textContent = '完全削除';
+        delBtn.onclick = () => permanentlyDeleteTrashMemo(m.id);
+        div.append(restoreBtn, delBtn);
+        list.appendChild(div);
+    });
+}
+function restoreTrashMemo(memoId) {
+    const memo = (state.trashMemos || []).find(m => m.id === memoId);
+    if (!memo) return;
+    const restored = Object.assign({}, memo);
+    restored.folderId = restored.originalFolderId || getActiveFolderId();
+    delete restored.deletedAt;
+    delete restored.originalFolderId;
+    restored.updated = Date.now();
+    state.memos.push(restored);
+    state.trashMemos = state.trashMemos.filter(m => m.id !== memoId);
+    saveState(); renderTrashList(); renderMemoList(); renderTagFilter();
+    toast('議事録を復元しました', 'success');
+}
+function permanentlyDeleteTrashMemo(memoId) {
+    if (!confirm('完全削除しますか？この操作は取り消せません。')) return;
+    state.trashMemos = (state.trashMemos || []).filter(m => m.id !== memoId);
+    saveState(); renderTrashList();
+    toast('完全削除しました', 'success');
+}
+function purgeTrash(showToast = false) {
+    const before = (state.trashMemos || []).length;
+    const cutoff = Date.now() - TRASH_RETENTION_MS;
+    state.trashMemos = (state.trashMemos || []).filter(m => !m.deletedAt || m.deletedAt >= cutoff);
+    const removed = before - state.trashMemos.length;
+    if (removed && showToast) toast(`${removed}件を完全削除しました`, 'success');
+}
+
 // ========== 議事メモタイトルのデフォルト/正規化 ==========
 function formatTemplate(template) {
     const d = new Date();
@@ -2118,7 +2674,7 @@ async function exportCurrentMemo() {
     const filename = sanitizeFilename(memo.title || getDefaultMemoTitle());
     const { content, mime } = convertMemoBody(memo);
     if (workFolderHandle) {
-        const ok = await writeToWorkFolder(filename, content);
+        const ok = await writeToWorkFolderPath(`${OUTPUT_DIR}/${filename}`, content);
         if (ok) { toast(`📄 ${filename} を保存しました`, 'success'); return; }
     }
     const blob = new Blob([content], { type: mime });
@@ -2140,7 +2696,7 @@ async function exportAllMemos() {
     for (const memo of state.memos) {
         const filename = sanitizeFilename(memo.title || getDefaultMemoTitle());
         const { content } = convertMemoBody(memo);
-        const ok = await writeToWorkFolder(filename, content);
+        const ok = await writeToWorkFolderPath(`${OUTPUT_DIR}/${filename}`, content);
         if (ok) count++;
     }
     toast(`${count}件のメモを書き出しました`, 'success');
@@ -2182,6 +2738,7 @@ function loadMemo(id) {
 function loadMemoIntoEditor(memo) {
     document.getElementById('memo-title').value = memo.title;
     document.getElementById('editor').innerHTML = memo.body || '';
+    hydrateEditorMediaLinks();
     renderTagInput();
 }
 function onTitleChange() {
@@ -2208,13 +2765,115 @@ function onTitleBlur() {
 function onEditorInput() {
     const memo = state.memos.find(m => m.id === state.selectedMemoId);
     if (!memo) return;
-    memo.body = document.getElementById('editor').innerHTML;
+    memo.body = serializeEditorHtml();
     memo.updated = Date.now();
     // WYSIWYG処理：マークダウン記法を即時変換
     processMarkdownInline();
     saveState();
 }
-function escapeHtml(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function escapeHtml(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function serializeEditorHtml() {
+    const editor = document.getElementById('editor');
+    if (!editor) return '';
+    const clone = editor.cloneNode(true);
+    clone.querySelectorAll('img[data-file], audio[data-file], video[data-file]').forEach(el => {
+        const file = el.getAttribute('data-file');
+        if (file) el.setAttribute('src', file);
+    });
+    return clone.innerHTML;
+}
+async function hydrateEditorMediaLinks() {
+    const editor = document.getElementById('editor');
+    if (!editor) return;
+    const nodes = editor.querySelectorAll('img[data-file], audio[data-file], video[data-file]');
+    for (const el of nodes) {
+        const path = el.getAttribute('data-file') || el.getAttribute('src');
+        if (!path || path.startsWith('data:') || path.startsWith('blob:')) continue;
+        if (workFolderHandle) {
+            const file = await readFileFromWorkFolderPath(path);
+            if (file) {
+                const url = URL.createObjectURL(file);
+                el.setAttribute('src', url);
+            }
+        }
+    }
+}
+function guessMediaKind(file) {
+    if ((file.type || '').startsWith('image/')) return 'image';
+    if ((file.type || '').startsWith('audio/')) return 'audio';
+    if ((file.type || '').startsWith('video/')) return 'video';
+    return 'file';
+}
+function extensionFromFile(file, fallback = 'bin') {
+    const m = (file.name || '').match(/\.([a-z0-9]{1,8})$/i);
+    if (m) return m[1].toLowerCase();
+    const type = file.type || '';
+    if (type.includes('png')) return 'png';
+    if (type.includes('jpeg')) return 'jpg';
+    if (type.includes('webp')) return 'webp';
+    if (type.includes('gif')) return 'gif';
+    if (type.includes('mp4')) return 'mp4';
+    if (type.includes('webm')) return 'webm';
+    if (type.includes('mpeg')) return 'mp3';
+    if (type.includes('wav')) return 'wav';
+    return fallback;
+}
+async function saveAssetBlob(fileOrBlob, kind, originalName = '') {
+    const ext = extensionFromFile({ name: originalName || fileOrBlob.name || '', type: fileOrBlob.type || '' }, kind === 'image' ? 'png' : 'bin');
+    const base = (kind === 'image' ? 'image' : kind);
+    const filename = `${base}_${makeSafeTimestamp()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+    const dir = kind === 'image' ? ASSET_IMAGE_DIR : ASSET_MEDIA_DIR;
+    const path = `${dir}/${filename}`;
+    if (workFolderHandle) {
+        const ok = await writeBlobToWorkFolderPath(path, fileOrBlob);
+        if (ok) return { path, url: URL.createObjectURL(fileOrBlob), filename };
+    }
+    const dataUrl = await blobToDataURL(fileOrBlob);
+    toast('ワークフォルダ未設定のため、今回のみJSON内に埋め込みます。ファイルリンク保存には設定が必要です。', 'warning');
+    return { path: dataUrl, url: dataUrl, filename };
+}
+async function insertMediaFile(file) {
+    const kind = guessMediaKind(file);
+    if (kind === 'file') {
+        toast('未対応ファイル形式です: ' + (file.name || ''), 'warning');
+        return;
+    }
+    const saved = await saveAssetBlob(file, kind, file.name);
+    insertLinkedMedia(kind, saved.url, saved.path, saved.filename || file.name);
+}
+function insertLinkedMedia(kind, displayUrl, filePath, label = '') {
+    const safePath = escapeHtml(filePath);
+    const safeLabel = escapeHtml(label || filePath);
+    let html = '';
+    if (kind === 'image') {
+        html = `<img class="media-thumb" src="${displayUrl}" data-file="${safePath}" alt="${safeLabel}"><div><br></div>`;
+    } else if (kind === 'audio') {
+        html = `<div class="memo-media" contenteditable="false"><div class="media-caption">音声: ${safeLabel}</div><audio controls src="${displayUrl}" data-file="${safePath}"></audio></div><div><br></div>`;
+    } else if (kind === 'video') {
+        html = `<div class="memo-media" contenteditable="false"><div class="media-caption">動画: ${safeLabel}</div><video controls src="${displayUrl}" data-file="${safePath}"></video></div><div><br></div>`;
+    }
+    const editor = document.getElementById('editor');
+    editor.focus();
+    document.execCommand('insertHTML', false, html);
+    onEditorInput();
+    toast('メディアを挿入しました', 'success');
+}
+async function handleMediaFileInput(e) {
+    const files = Array.from(e.target.files || []);
+    for (const file of files) await insertMediaFile(file);
+    e.target.value = '';
+}
+function onEditorDragOver(e) {
+    if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault();
+}
+async function onEditorDrop(e) {
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (!files.length) return;
+    e.preventDefault();
+    for (const file of files) await insertMediaFile(file);
+}
+
 
 // ========== タグ入力 ==========
 function renderTagInput() {
@@ -2271,6 +2930,45 @@ function highlight() {
     }
     onEditorInput();
 }
+
+function clearHighlight() {
+    const sel = window.getSelection();
+    const editor = document.getElementById('editor');
+    if (!editor) return;
+    if (!sel || !sel.rangeCount || sel.isCollapsed) {
+        const node = sel && sel.anchorNode ? (sel.anchorNode.nodeType === Node.ELEMENT_NODE ? sel.anchorNode : sel.anchorNode.parentElement) : null;
+        const marker = node ? node.closest('.marker, span[style*="background"]') : null;
+        if (marker && editor.contains(marker)) {
+            const parent = marker.parentNode;
+            while (marker.firstChild) parent.insertBefore(marker.firstChild, marker);
+            marker.remove();
+            onEditorInput();
+            toast('蛍光ペンを無色化しました', 'success');
+        }
+        return;
+    }
+    const range = sel.getRangeAt(0);
+    const frag = range.extractContents();
+    const wrap = document.createElement('div');
+    wrap.appendChild(frag);
+    wrap.querySelectorAll('.marker').forEach(m => {
+        const parent = m.parentNode;
+        while (m.firstChild) parent.insertBefore(m.firstChild, m);
+        m.remove();
+    });
+    wrap.querySelectorAll('[style]').forEach(el => {
+        el.style.backgroundColor = '';
+        el.style.background = '';
+        if (!el.getAttribute('style')) el.removeAttribute('style');
+    });
+    range.insertNode(wrap);
+    while (wrap.firstChild) wrap.parentNode.insertBefore(wrap.firstChild, wrap);
+    wrap.remove();
+    sel.removeAllRanges();
+    onEditorInput();
+    toast('選択範囲の蛍光ペンを無色化しました', 'success');
+}
+
 function insertLink() {
     const url = prompt('URL:', 'https://');
     if (!url) return;
@@ -2795,8 +3493,7 @@ async function onEditorPaste(e) {
         if (item.type.startsWith('image/')) {
             e.preventDefault();
             const blob = item.getAsFile();
-            const dataUrl = await blobToDataURL(blob);
-            insertImageScaled(dataUrl);
+            await insertMediaFile(new File([blob], `paste_${makeSafeTimestamp()}.png`, { type: blob.type || 'image/png' }));
             return;
         }
     }
@@ -2808,21 +3505,33 @@ function blobToDataURL(blob) {
         reader.readAsDataURL(blob);
     });
 }
-function insertImageScaled(dataUrl, maxWidth = 600) {
-    const img = new Image();
-    img.onload = () => {
-        let w = img.naturalWidth, h = img.naturalHeight;
-        if (w > maxWidth) {
-            h = h * (maxWidth / w);
-            w = maxWidth;
-        }
-        const html = `<img src="${dataUrl}" style="width:${w}px;height:${h}px;" /><div><br></div>`;
-        document.getElementById('editor').focus();
-        document.execCommand('insertHTML', false, html);
-        onEditorInput();
-        toast('画像を貼り付けました（縮尺自動調整）', 'success');
-    };
-    img.src = dataUrl;
+async function insertImageScaled(dataUrl, maxWidth = 600) {
+    // 旧処理互換：dataURLをBlob化し、assets/imagesへ保存してから画面表示
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    await insertMediaFile(new File([blob], `capture_${makeSafeTimestamp()}.png`, { type: blob.type || 'image/png' }));
+}
+
+
+async function quickScreenshotSave() {
+    try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' }, audio: false });
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        await video.play();
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        stream.getTracks().forEach(t => t.stop());
+        canvas.toBlob(async (blob) => {
+            if (!blob) { toast('スクリーンショット作成に失敗しました', 'error'); return; }
+            await insertMediaFile(new File([blob], `screenshot_${makeSafeTimestamp()}.png`, { type: 'image/png' }));
+            toast('スクリーンショットを保存しました', 'success');
+        }, 'image/png');
+    } catch (err) {
+        toast('スクリーンショット取得失敗: ' + err.message, 'error');
+    }
 }
 
 // ========== 画面キャプチャ（範囲指定） ==========
@@ -2958,10 +3667,11 @@ async function readRecordingFile(filename) {
 function insertAudioLinkToMemo(filename, duration) {
     const dur = duration ? ` (${String(Math.floor(duration / 60)).padStart(2, '0')}:${String(duration % 60).padStart(2, '0')})` : '';
     const ts = new Date().toLocaleString('ja-JP');
-    const html = `<div class="memo-audio" contenteditable="false">
-<span class="memo-audio-icon">🎙</span>
-<a href="#" class="memo-audio-link" data-filename="${escapeHtml(filename)}" onclick="playRecordingByLink(event,'${escapeHtml(filename)}')">${escapeHtml(filename)}</a>
-<span class="memo-audio-meta">${ts}${dur}</span>
+    const path = `${RECORDINGS_SUBDIR}/${filename}`;
+    const html = `<div class="memo-media" contenteditable="false">
+<div class="media-caption">🎙 録音: ${escapeHtml(filename)} ${escapeHtml(ts)}${escapeHtml(dur)}</div>
+<a href="#" class="memo-audio-link" data-filename="${escapeHtml(filename)}" onclick="playRecordingByLink(event,'${escapeHtml(filename)}')">別ウィンドウ再生</a>
+<audio controls data-file="${escapeHtml(path)}" src="${escapeHtml(path)}"></audio>
 </div><div><br></div>`;
     const editor = document.getElementById('editor');
     if (!editor) return;
@@ -2973,6 +3683,7 @@ function insertAudioLinkToMemo(filename, duration) {
     sel.removeAllRanges();
     sel.addRange(range);
     document.execCommand('insertHTML', false, html);
+    hydrateEditorMediaLinks();
     onEditorInput();
 }
 let _currentAudio = null;
@@ -3277,7 +3988,10 @@ function saveTaskFromPopup() {
         owner: document.getElementById('pop-task-owner').value,
         status: document.getElementById('pop-task-status').value,
         memoId: state.currentTaskMemoId,
+        folderId: getActiveFolderId(),
+        priority: '', relatedWbs: '', relatedMemo: '',
         wbsId: null,
+        kind: 'todo',
         parentId: parentVal || null,
         order: state.tasks.length
     };
@@ -3288,75 +4002,52 @@ function saveTaskFromPopup() {
 }
 function addBlankTask() {
     const task = {
-        id: uid(), title: '', date: '', startDate: '', owner: '', status: '未着手',
-        memoId: null, wbsId: null, parentId: null, order: state.tasks.length
+        id: uid(), title: '', date: '', startDate: '', owner: '', status: '未着手', folderId: getActiveFolderId(),
+        memoId: null, wbsId: null, kind: 'todo', parentId: null, order: state.tasks.length
     };
     state.tasks.push(task);
     saveState(); renderTasks();
     // 新規行のtitle inputにフォーカス
     setTimeout(() => {
-        const input = document.querySelector(`#tasks-tbody input[data-tid="${task.id}"][data-field="title"]`);
+        const input = document.querySelector(`#tasks-tbody input[data-tid="${task.id}"][data-field="title"], #tasks-tbody textarea[data-tid="${task.id}"][data-field="title"]`);
         if (input) { input.focus(); input.scrollIntoView({ block: 'center' }); }
     }, 30);
 }
 
 // ========== タスク一覧描画 ==========
 function renderTasks() {
+    ensureStateShape();
     const tbody = document.getElementById('tasks-tbody');
+    const table = tbody.closest('table');
+    const theadRow = table.querySelector('thead tr');
+    const columns = state.settings.todoColumns || DEFAULT_TODO_COLUMNS;
+    theadRow.innerHTML = columns.map(c => `<th>${escapeHtml(c.label)}</th>`).join('') + '<th style="width:4%"></th>';
     tbody.innerHTML = '';
-    state.tasks.forEach(t => {
+    getTodoTasksForFolder().forEach(t => {
         const tr = document.createElement('tr');
-        const memo = t.memoId ? state.memos.find(m => m.id === t.memoId) : null;
-        tr.innerHTML = `
-            <td><input type="text" value="${escapeHtml(t.title)}" data-tid="${t.id}" data-field="title" placeholder="内容を入力..."></td>
-            <td><select data-tid="${t.id}" data-field="parentId">${buildParentTaskOptions(t.id, t.parentId)}</select></td>
-            <td><input type="date" value="${t.startDate || ''}" data-tid="${t.id}" data-field="startDate"></td>
-            <td><input type="date" value="${t.date || ''}" data-tid="${t.id}" data-field="date"></td>
-            <td><input type="text" value="${escapeHtml(t.owner || '')}" data-tid="${t.id}" data-field="owner"></td>
-            <td>
-                <select data-tid="${t.id}" data-field="status">
-                    <option ${t.status === '未着手' ? 'selected' : ''}>未着手</option>
-                    <option ${t.status === '進行中' ? 'selected' : ''}>進行中</option>
-                    <option ${t.status === '完了' ? 'selected' : ''}>完了</option>
-                    <option ${t.status === '保留' ? 'selected' : ''}>保留</option>
-                </select>
-            </td>
-            <td style="font-size:10px;color:var(--text-dim);">${memo ? escapeHtml(memo.title) : '—'}</td>
-            <td><button class="btn-delete" data-tid="${t.id}" data-action="delete">🗑</button></td>
-        `;
+        columns.forEach(col => {
+            const td = document.createElement('td');
+            td.appendChild(createTodoCellInput(t, col));
+            tr.appendChild(td);
+        });
+        const delTd = document.createElement('td');
+        delTd.innerHTML = `<button class="btn-delete" data-tid="${t.id}" data-action="delete">🗑</button>`;
+        tr.appendChild(delTd);
         tbody.appendChild(tr);
     });
-    // バインド
-    tbody.querySelectorAll('input, select').forEach(el => {
-        el.addEventListener('change', e => {
-            const tid = e.target.dataset.tid;
-            const field = e.target.dataset.field;
-            const t = state.tasks.find(x => x.id === tid);
-            if (!t) return;
-            let val = e.target.value;
-            if (field === 'parentId') {
-                if (val === '') val = null;
-                if (val && (val === tid || isAncestor(tid, val))) {
-                    toast('循環参照になるため設定できません', 'error');
-                    renderTasks();
-                    return;
-                }
+    tbody.querySelectorAll('input, select, textarea').forEach(el => {
+        el.addEventListener('change', e => updateTaskFieldFromInput(e.target));
+        el.addEventListener('input', e => {
+            if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.dataset.field !== 'date') {
+                if (e.target.tagName === 'TEXTAREA') autoGrowTextarea(e.target);
+                updateTaskFieldFromInput(e.target, false);
             }
-            t[field] = val;
-            saveState();
-            updateStats();
-            if (field === 'parentId') renderTasks();
         });
-        // 内容欄でEnter押下時に新規行追加して連続入力
-        if (el.dataset.field === 'title' && el.tagName === 'INPUT') {
+        if (el.dataset.field === 'title' && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
             el.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    // 編集を確定
-                    const tid = e.target.dataset.tid;
-                    const t = state.tasks.find(x => x.id === tid);
-                    if (t) { t.title = e.target.value; saveState(); }
-                    // 新規行を追加してフォーカス
+                    updateTaskFieldFromInput(e.target);
                     addBlankTask();
                 }
             });
@@ -3364,18 +4055,564 @@ function renderTasks() {
     });
     tbody.querySelectorAll('[data-action="delete"]').forEach(btn => {
         btn.onclick = () => {
-            if (!confirm('このタスクを削除しますか？')) return;
+            if (!confirm('このToDoを削除しますか？')) return;
             state.tasks = state.tasks.filter(x => x.id !== btn.dataset.tid);
-            saveState(); renderTasks();
+            saveState(); renderTasks(); refreshTodoText();
+            if (document.getElementById('tab-wbsgantt').classList.contains('active')) { renderWBS(); renderGantt(); }
         };
     });
     updateStats();
+    refreshTodoText();
+}
+function createTodoCellInput(t, col) {
+    let el;
+    const val = t[col.key] != null ? t[col.key] : (t.extra ? t.extra[col.key] : '');
+    if (col.type === 'select') {
+        el = document.createElement('select');
+        (col.options || []).forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt; o.textContent = opt;
+            if ((val || '') === opt) o.selected = true;
+            el.appendChild(o);
+        });
+    } else if (col.type === 'date') {
+        el = document.createElement('input');
+        el.type = 'date';
+        el.value = val || '';
+        el.placeholder = col.label;
+    } else {
+        el = document.createElement('textarea');
+        el.className = 'task-text-input';
+        el.rows = 1;
+        el.value = val || '';
+        el.placeholder = col.label;
+        setTimeout(() => autoGrowTextarea(el), 0);
+    }
+    el.dataset.tid = t.id;
+    el.dataset.field = col.key;
+    return el;
+}
+function updateTaskFieldFromInput(el, persist = true) {
+    const t = state.tasks.find(x => x.id === el.dataset.tid);
+    if (!t) return;
+    const field = el.dataset.field;
+    if (['title','owner','date','status','priority','relatedWbs','relatedMemo','startDate','parentId'].includes(field)) {
+        t[field] = el.value;
+    } else {
+        t.extra = t.extra || {};
+        t.extra[field] = el.value;
+    }
+    if (persist) {
+        saveState(); updateStats(); refreshTodoText();
+        if (document.getElementById('tab-wbsgantt').classList.contains('active')) { renderWBS(); renderGantt(); }
+    }
 }
 function updateStats() {
-    document.getElementById('stat-total').textContent = state.tasks.length;
-    document.getElementById('stat-todo').textContent = state.tasks.filter(t => t.status === '未着手').length;
-    document.getElementById('stat-doing').textContent = state.tasks.filter(t => t.status === '進行中').length;
-    document.getElementById('stat-done').textContent = state.tasks.filter(t => t.status === '完了').length;
+    const tasks = getTodoTasksForFolder();
+    document.getElementById('stat-total').textContent = tasks.length;
+    document.getElementById('stat-todo').textContent = tasks.filter(t => t.status === '未着手').length;
+    document.getElementById('stat-doing').textContent = tasks.filter(t => t.status === '進行中').length;
+    document.getElementById('stat-done').textContent = tasks.filter(t => t.status === '完了').length;
+}
+
+
+
+
+function getCellInput(el) {
+    if (!el) return null;
+    if (el.matches && el.matches('textarea, input')) return el;
+    return el.querySelector ? el.querySelector('textarea, input, .structured-input') : null;
+}
+function getCellPlainText(cell) {
+    if (!cell) return '';
+    const input = getCellInput(cell);
+    const raw = input ? input.value : (cell.textContent || '');
+    return String(raw).replace(/\u00a0/g, ' ').replace(/\r?\n/g, ' ').trim();
+}
+function setCellPlainText(cell, value) {
+    const v = value || '';
+    if (!cell) return;
+    const input = getCellInput(cell);
+    if (input) {
+        input.value = v;
+        input.classList.toggle('placeholder', !input.value);
+        autoGrowStructuredCell(input);
+    } else {
+        cell.textContent = v;
+        cell.classList.toggle('placeholder', !cell.textContent);
+    }
+}
+function autoGrowTextarea(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.max(28, el.scrollHeight) + 'px';
+}
+function autoGrowStructuredCell(cell) {
+    const input = getCellInput(cell);
+    if (!input || input.tagName !== 'TEXTAREA') return;
+    input.style.height = '34px';
+    input.style.height = Math.max(34, input.scrollHeight) + 'px';
+}
+function placeCaretInEditableCell(cell, atEnd = true) {
+    const input = getCellInput(cell);
+    if (!input) return;
+    const pos = atEnd ? input.value.length : 0;
+    try { input.setSelectionRange(pos, pos); } catch (e) {}
+}
+function focusEditableCell(cell, atEnd = true) {
+    const input = getCellInput(cell);
+    if (!input) return;
+    if (!input.hasAttribute('tabindex')) input.tabIndex = 0;
+    try { input.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
+    try { input.focus({ preventScroll: true }); } catch (e) { try { input.focus(); } catch (ignore) {} }
+    placeCaretInEditableCell(input, atEnd);
+}
+function queueFocusEditableCell(cell, atEnd = true) {
+    const input = getCellInput(cell);
+    if (!input) return;
+    focusEditableCell(input, atEnd);
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => focusEditableCell(input, atEnd));
+    setTimeout(() => focusEditableCell(input, atEnd), 30);
+    setTimeout(() => focusEditableCell(input, atEnd), 120);
+}
+function isCaretAtCellStart(cell) {
+    const input = getCellInput(cell);
+    if (!input) return false;
+    return (input.selectionStart || 0) === 0;
+}
+function makeStructuredCell(text, className, placeholder, editable = true) {
+    const input = editable ? document.createElement('textarea') : document.createElement('div');
+    input.className = 'structured-input' + (className ? ' ' + className.replace(/-cell\b/g, '-input') : '');
+    input.spellcheck = false;
+    input.tabIndex = editable ? 0 : -1;
+    if (placeholder) {
+        input.dataset.placeholder = placeholder;
+        if (editable) input.placeholder = placeholder;
+    }
+    if (editable) {
+        input.rows = 1;
+        input.setAttribute('role', 'textbox');
+        input.setAttribute('aria-label', placeholder || '入力セル');
+        input.addEventListener('focus', () => autoGrowStructuredCell(input));
+        input.addEventListener('click', () => placeCaretInEditableCell(input, true));
+        input.addEventListener('input', () => {
+            input.classList.toggle('placeholder', !input.value);
+            autoGrowStructuredCell(input);
+            syncTextareasFromStructuredEditors(false);
+        });
+    }
+    setCellPlainText(input, text || '');
+    return input;
+}
+function makeStructuredRow(kind, cells, level = 0, isHeader = false) {
+    const row = document.createElement('tr');
+    row.className = 'structured-row' + (isHeader ? ' header' : '');
+    row.dataset.kind = kind;
+    row.dataset.level = String(Math.max(0, Math.min(MAX_WBS_LEVEL - 1, level || 0)));
+    cells.forEach(c => {
+        const wrapper = document.createElement(isHeader ? 'th' : 'td');
+        wrapper.className = 'structured-cell';
+        wrapper.appendChild(c);
+        row.appendChild(wrapper);
+    });
+    return row;
+}
+function getStructuredRows(editor, includeHeader = true) {
+    if (!editor) return [];
+    const selector = includeHeader ? '.structured-row' : '.structured-row:not(.header)';
+    return Array.from(editor.querySelectorAll(selector));
+}
+function getStructuredInputs(row) {
+    return row ? Array.from(row.querySelectorAll('.structured-input')) : [];
+}
+function getStructuredBody(editor) {
+    return editor ? editor.querySelector('tbody') : null;
+}
+function todoColumnGridTemplate(columns) {
+    return columns.map((c, i) => i === 0 ? 'minmax(260px,1.5fr)' : 'minmax(120px,1fr)').join(' ');
+}
+function columnsFromTodoEditorHeader() {
+    const editor = document.getElementById('todo-structured-editor');
+    const header = editor ? editor.querySelector('.structured-row.header') : null;
+    if (!header) return state.settings.todoColumns || DEFAULT_TODO_COLUMNS;
+    const oldCols = state.settings.todoColumns || DEFAULT_TODO_COLUMNS;
+    return normalizeTodoColumns(getStructuredInputs(header).map((h, i) => {
+        const label = getCellPlainText(h) || '列';
+        const found = oldCols.find(c => c.label === label) || DEFAULT_TODO_COLUMNS.find(c => c.label === label);
+        return found ? Object.assign({}, found, { label }) : { key: 'custom_' + label.replace(/\W/g, '_') + '_' + i, label, type: 'text' };
+    }));
+}
+function renderTodoStructuredEditorFromText(text) {
+    const editor = document.getElementById('todo-structured-editor');
+    if (!editor) return;
+    const cols = state.settings.todoColumns || DEFAULT_TODO_COLUMNS;
+    const lines = (text || '').replace(/\r\n/g, '\n').split('\n');
+    const hasHeader = lines.length && lines[0].trim();
+    const headers = hasHeader ? lines[0].split('\t') : cols.map(c => c.label);
+    const normalizedCols = normalizeTodoColumns(headers.map((label, i) => {
+        const found = cols.find(c => c.label === label) || DEFAULT_TODO_COLUMNS.find(c => c.label === label);
+        return found ? Object.assign({}, found, { label }) : { key: 'custom_' + String(label || '列').replace(/\W/g, '_') + '_' + i, label: label || '列', type: 'text' };
+    }));
+    editor.innerHTML = '';
+    const table = document.createElement('table');
+    table.className = 'structured-table todo-table';
+    const colgroup = document.createElement('colgroup');
+    normalizedCols.forEach(() => colgroup.appendChild(document.createElement('col')));
+    const thead = document.createElement('thead');
+    const tbody = document.createElement('tbody');
+    thead.appendChild(makeStructuredRow('todo', normalizedCols.map(c => makeStructuredCell(c.label, 'todo-header-cell', '列名', true)), 0, true));
+    table.appendChild(colgroup);
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    editor.appendChild(table);
+    const bodyLines = lines.slice(hasHeader ? 1 : 0).filter(l => l.trim() !== '');
+    if (!bodyLines.length) bodyLines.push('');
+    bodyLines.forEach(line => addTodoStructuredRow(line.split('\t'), normalizedCols, false));
+}
+function addTodoStructuredRow(values = [], columns = columnsFromTodoEditorHeader(), focus = true) {
+    const editor = document.getElementById('todo-structured-editor');
+    if (!editor) return null;
+    let tbody = getStructuredBody(editor);
+    if (!tbody) {
+        renderTodoStructuredEditorFromText(todoColumnsHeader() + '\n');
+        tbody = getStructuredBody(editor);
+    }
+    const row = makeStructuredRow('todo', columns.map((c, i) => makeStructuredCell(values[i] || '', 'todo-cell', i === 0 ? 'ここに内容を入力' : c.label, true)), 0, false);
+    tbody.appendChild(row);
+    if (focus) queueFocusEditableCell(getStructuredInputs(row)[0]);
+    return row;
+}
+function todoStructuredEditorToText() {
+    const editor = document.getElementById('todo-structured-editor');
+    if (!editor) return document.getElementById('todo-textarea')?.value || '';
+    const rows = getStructuredRows(editor, true);
+    return rows.map(row => getStructuredInputs(row).map(getCellPlainText).join('\t'))
+        .filter((line, idx) => idx === 0 || line.replace(/\t/g, '').trim() !== '')
+        .join('\n');
+}
+function handleTodoStructuredKeydown(e) {
+    const editor = document.getElementById('todo-structured-editor');
+    if (!editor) return;
+    const cell = e.target.closest && e.target.closest('.structured-input');
+    if (!cell || !editor.contains(cell)) return;
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const row = cell.closest('.structured-row');
+        if (!row || row.classList.contains('header')) return;
+        const cells = getStructuredInputs(row);
+        const nextRow = addTodoStructuredRow([], columnsFromTodoEditorHeader(), false);
+        row.after(nextRow);
+        const nextCells = getStructuredInputs(nextRow);
+        queueFocusEditableCell(nextCells[Math.min(cells.indexOf(cell), nextCells.length - 1)]);
+    } else if (e.key === 'Tab') {
+        e.preventDefault();
+        const rows = getStructuredRows(editor, true);
+        const row = cell.closest('.structured-row');
+        const rowIndex = rows.indexOf(row);
+        const cells = getStructuredInputs(row);
+        const cellIndex = cells.indexOf(cell);
+        let target;
+        if (e.shiftKey) {
+            const prevRow = rows[rowIndex - 1];
+            target = cells[cellIndex - 1] || (prevRow && getStructuredInputs(prevRow).slice(-1)[0]);
+        } else {
+            const nextRow = rows[rowIndex + 1];
+            target = cells[cellIndex + 1] || (nextRow && getStructuredInputs(nextRow)[0]);
+            if (!target) target = getStructuredInputs(addTodoStructuredRow([], columnsFromTodoEditorHeader(), false))[0];
+        }
+        queueFocusEditableCell(target);
+    }
+}
+function renderWBSStructuredEditorFromText(text) {
+    const editor = document.getElementById('wbs-structured-editor');
+    if (!editor) return;
+    editor.innerHTML = '';
+    const table = document.createElement('table');
+    table.className = 'structured-table wbs-table';
+    const colgroup = document.createElement('colgroup');
+    for (let i = 0; i < 4; i++) colgroup.appendChild(document.createElement('col'));
+    const thead = document.createElement('thead');
+    const tbody = document.createElement('tbody');
+    thead.appendChild(makeStructuredRow('wbs', [
+        makeStructuredCell('項目名', 'wbs-header-cell', '', false),
+        makeStructuredCell('期日', 'wbs-header-cell', '', false),
+        makeStructuredCell('担当者', 'wbs-header-cell', '', false),
+        makeStructuredCell('ステータス', 'wbs-header-cell', '', false)
+    ], 0, true));
+    table.appendChild(colgroup);
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    editor.appendChild(table);
+    const lines = (text || '').replace(/\r\n/g, '\n').split('\n').filter(l => l.trim() !== '');
+    if (!lines.length) lines.push('');
+    lines.forEach(line => {
+        const level = Math.min((line.match(/^\t*/) || [''])[0].length, MAX_WBS_LEVEL - 1);
+        const cells = line.replace(/^\t+/, '').split('\t');
+        addWBSStructuredRow(cells, level, false);
+    });
+}
+function addWBSStructuredRow(values = [], level = 0, focus = true) {
+    const editor = document.getElementById('wbs-structured-editor');
+    if (!editor) return null;
+    let tbody = getStructuredBody(editor);
+    if (!tbody) {
+        renderWBSStructuredEditorFromText('');
+        tbody = getStructuredBody(editor);
+    }
+    const safeLevel = Math.max(0, Math.min(MAX_WBS_LEVEL - 1, level || 0));
+    const row = makeStructuredRow('wbs', [
+        makeStructuredCell(values[0] || '', 'wbs-title-cell', 'ここにWBS項目名を入力', true),
+        makeStructuredCell(values[1] || '', 'wbs-date-cell', '期日', true),
+        makeStructuredCell(values[2] || '', 'wbs-owner-cell', '担当者', true),
+        makeStructuredCell(values[3] || '', 'wbs-status-cell', 'ステータス', true)
+    ], safeLevel, false);
+    tbody.appendChild(row);
+    if (focus) queueFocusEditableCell(row.querySelector('.wbs-title-input'));
+    return row;
+}
+function updateWBSRowLevel(row, nextLevel) {
+    if (!row) return;
+    const level = Math.max(0, Math.min(MAX_WBS_LEVEL - 1, nextLevel));
+    row.dataset.level = String(level);
+}
+function wbsStructuredEditorToText() {
+    const editor = document.getElementById('wbs-structured-editor');
+    if (!editor) return document.getElementById('wbs-textarea')?.value || '';
+    const rows = getStructuredRows(editor, false);
+    return rows.map(row => {
+        const level = Math.max(0, Math.min(MAX_WBS_LEVEL - 1, Number(row.dataset.level || 0)));
+        const cells = getStructuredInputs(row).map(getCellPlainText);
+        return '\t'.repeat(level) + cells.join('\t');
+    }).filter(line => line.replace(/\t/g, '').trim() !== '').join('\n');
+}
+function handleWBSStructuredKeydown(e) {
+    const editor = document.getElementById('wbs-structured-editor');
+    if (!editor) return;
+    const cell = e.target.closest && e.target.closest('.structured-input');
+    if (!cell || !editor.contains(cell)) return;
+    const row = cell.closest('.structured-row');
+    if (!row || row.classList.contains('header')) return;
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const nextRow = addWBSStructuredRow([], Number(row.dataset.level || 0), false);
+        row.after(nextRow);
+        queueFocusEditableCell(nextRow.querySelector('.wbs-title-input'));
+    } else if (e.key === 'Tab') {
+        e.preventDefault();
+        if (cell.classList.contains('wbs-title-input') && (e.shiftKey || isCaretAtCellStart(cell))) {
+            const current = Number(row.dataset.level || 0);
+            if (e.shiftKey) updateWBSRowLevel(row, current - 1);
+            else if (current < MAX_WBS_LEVEL - 1) updateWBSRowLevel(row, current + 1);
+            else toast('WBSはL7までです', 'warning');
+            queueFocusEditableCell(cell);
+            syncTextareasFromStructuredEditors(false);
+            return;
+        }
+        const cells = getStructuredInputs(row);
+        const rows = getStructuredRows(editor, true);
+        const rowIndex = rows.indexOf(row);
+        const cellIndex = cells.indexOf(cell);
+        let target;
+        if (e.shiftKey) {
+            const prevRow = rows[rowIndex - 1];
+            target = cells[cellIndex - 1] || (prevRow && getStructuredInputs(prevRow).slice(-1)[0]);
+        } else {
+            const nextRow = rows[rowIndex + 1];
+            target = cells[cellIndex + 1] || (nextRow && getStructuredInputs(nextRow)[0]);
+        }
+        if (!target && !e.shiftKey) target = getStructuredInputs(addWBSStructuredRow([], Number(row.dataset.level || 0), false))[0];
+        queueFocusEditableCell(target);
+    }
+}
+let todoSourceDirty = false;
+let wbsSourceDirty = false;
+let todoSourceRenderTimer = null;
+let wbsSourceRenderTimer = null;
+
+function onTodoSourceInput() {
+    todoSourceDirty = true;
+    clearTimeout(todoSourceRenderTimer);
+    todoSourceRenderTimer = setTimeout(() => {
+        const ta = document.getElementById('todo-textarea');
+        if (ta) renderTodoStructuredEditorFromText(ta.value);
+    }, 120);
+}
+function onWBSSourceInput() {
+    wbsSourceDirty = true;
+    clearTimeout(wbsSourceRenderTimer);
+    wbsSourceRenderTimer = setTimeout(() => {
+        const ta = document.getElementById('wbs-textarea');
+        if (ta) renderWBSStructuredEditorFromText(ta.value);
+    }, 120);
+}
+
+function syncTextareasFromStructuredEditors(save = false) {
+    const todoTa = document.getElementById('todo-textarea');
+    const wbsTa = document.getElementById('wbs-textarea');
+    if (todoTa && document.getElementById('todo-structured-editor')) {
+        todoTa.value = todoStructuredEditorToText();
+        todoSourceDirty = false;
+    }
+    if (wbsTa && document.getElementById('wbs-structured-editor')) {
+        wbsTa.value = wbsStructuredEditorToText();
+        wbsSourceDirty = false;
+    }
+    if (save) saveState();
+}
+
+function focusFirstTodoInputCell() {
+    const firstCell = document.querySelector('#todo-structured-editor .structured-row:not(.header) .structured-input');
+    if (firstCell) { queueFocusEditableCell(firstCell, true); return; }
+    const ta = document.getElementById('todo-textarea');
+    if (ta) { try { ta.focus({ preventScroll: true }); } catch (e) { try { ta.focus(); } catch (ignore) {} } }
+}
+function focusFirstWBSInputCell() {
+    const firstCell = document.querySelector('#wbs-structured-editor .structured-row:not(.header) .wbs-title-input');
+    if (firstCell) { queueFocusEditableCell(firstCell, true); return; }
+    const ta = document.getElementById('wbs-textarea');
+    if (ta) { try { ta.focus({ preventScroll: true }); } catch (e) { try { ta.focus(); } catch (ignore) {} } }
+}
+
+// 構造化WBS/ToDoエディタのキー操作は、エディタ再描画後も効くようにdocumentで受ける
+if (!window.__structuredWbsTodoKeydownBound) {
+    window.__structuredWbsTodoKeydownBound = true;
+    document.addEventListener('keydown', (e) => {
+        const target = e.target;
+        if (!target || !target.closest) return;
+        if (target.closest('#todo-structured-editor')) handleTodoStructuredKeydown(e);
+        else if (target.closest('#wbs-structured-editor')) handleWBSStructuredKeydown(e);
+    });
+}
+
+function todoColumnsHeader() {
+    return (state.settings.todoColumns || DEFAULT_TODO_COLUMNS).map(c => c.label).join('\t');
+}
+function refreshTodoText() {
+    const ta = document.getElementById('todo-textarea');
+    if (!ta) return;
+    const cols = state.settings.todoColumns || DEFAULT_TODO_COLUMNS;
+    const lines = [cols.map(c => c.label).join('\t')];
+    const todoRows = getTodoTasksForFolder();
+    todoRows.forEach(t => {
+        lines.push(cols.map(c => {
+            const val = t[c.key] != null ? t[c.key] : (t.extra ? t.extra[c.key] : '');
+            return String(val || '').replace(/\r?\n/g, ' ');
+        }).join('\t'));
+    });
+    if (!todoRows.length) lines.push('');
+    ta.value = lines.join('\n');
+    todoSourceDirty = false;
+    renderTodoStructuredEditorFromText(ta.value);
+}
+function applyTodoText() {
+    const ta = document.getElementById('todo-textarea');
+    if (!ta) return;
+    syncTextareasFromStructuredEditors(false);
+    const lines = ta.value.replace(/\r\n/g, '\n').split('\n').filter(l => l.trim() !== '');
+    if (!lines.length) return;
+    const headers = lines[0].split('\t').map(h => h.trim() || '列');
+    const oldCols = state.settings.todoColumns || DEFAULT_TODO_COLUMNS;
+    const cols = headers.map((label, i) => {
+        const found = oldCols.find(c => c.label === label) || DEFAULT_TODO_COLUMNS.find(c => c.label === label);
+        return found ? Object.assign({}, found, { label }) : { key: 'custom_' + label.replace(/\W/g, '_') + '_' + i, label, type: 'text' };
+    });
+    state.settings.todoColumns = normalizeTodoColumns(cols);
+    const folderId = getActiveFolderId();
+    state.tasks = state.tasks.filter(t => (t.folderId || folderId) !== folderId || t.kind !== 'todo');
+    lines.slice(1).forEach((line, idx) => {
+        const cells = line.split('\t');
+        const task = { id: uid(), folderId, kind: 'todo', title: '', owner: '', date: '', status: '未着手', priority: '', relatedWbs: '', relatedMemo: '', parentId: null, startDate: '', memoId: null, wbsId: null, order: idx, extra: {} };
+        cols.forEach((c, i) => {
+            const v = cells[i] || '';
+            if (['title','owner','date','status','priority','relatedWbs','relatedMemo'].includes(c.key)) task[c.key] = v;
+            else task.extra[c.key] = v;
+        });
+        if (task.title) state.tasks.push(task);
+    });
+    todoSourceDirty = false;
+    saveState(); renderTasks(); renderWBS(); renderGantt(); refreshTodoText();
+    toast('ToDoテキストを反映しました', 'success');
+}
+function addTodoColumn() {
+    const label = prompt('追加するカラム名:', 'メモ');
+    if (!label) return;
+    const key = 'custom_' + Date.now().toString(36);
+    state.settings.todoColumns = state.settings.todoColumns || DEFAULT_TODO_COLUMNS.slice();
+    state.settings.todoColumns.push({ key, label, type: 'text' });
+    saveState(); renderTasks(); refreshTodoText();
+}
+async function exportTodoText() {
+    const ta = document.getElementById('todo-textarea');
+    if (!ta) refreshTodoText();
+    syncTextareasFromStructuredEditors(false);
+    const content = (document.getElementById('todo-textarea')?.value || '').replace(/\n/g, '\r\n');
+    const filename = 'todo_' + sanitizeFilename(getActiveFolderName()) + '_' + makeSafeTimestamp() + '.txt';
+    await exportTextFile(filename, content);
+}
+function buildWBSText() {
+    const lines = [];
+    flattenWBS(getWBSTasksForFolder()).forEach(it => {
+        const t = it.task;
+        lines.push('\t'.repeat(Math.min(it.depth, MAX_WBS_LEVEL - 1)) + [
+            t.title || '',
+            t.date || '',
+            t.owner || '',
+            t.status || ''
+        ].join('\t'));
+    });
+    return lines.join('\n');
+}
+function refreshWBSText() {
+    const ta = document.getElementById('wbs-textarea');
+    if (ta) ta.value = buildWBSText();
+    wbsSourceDirty = false;
+    renderWBSStructuredEditorFromText(ta ? ta.value : '');
+}
+function applyWBSText() {
+    const ta = document.getElementById('wbs-textarea');
+    if (!ta) return;
+    syncTextareasFromStructuredEditors(false);
+    const lines = ta.value.replace(/\r\n/g, '\n').split('\n').filter(l => l.trim() !== '');
+    const folderId = getActiveFolderId();
+    state.tasks = state.tasks.filter(t => (t.folderId || folderId) !== folderId || t.kind !== 'wbs');
+    const stack = [];
+    lines.forEach((line, idx) => {
+        const depthRaw = (line.match(/^\t*/) || [''])[0].length;
+        const depth = Math.min(depthRaw, MAX_WBS_LEVEL - 1);
+        const cells = line.replace(/^\t+/, '').split('\t');
+        const title = (cells[0] || '').trim();
+        if (!title) return;
+        const parent = depth > 0 ? stack[depth - 1] : null;
+        const task = {
+            id: uid(), folderId, kind: 'wbs', title,
+            date: cells[1] || '', owner: cells[2] || '', status: cells[3] || '未着手',
+            startDate: '', memoId: null, wbsId: null, parentId: parent ? parent.id : null,
+            order: idx, priority: '', relatedWbs: '', relatedMemo: '', extra: {}
+        };
+        state.tasks.push(task);
+        stack[depth] = task;
+        stack.length = depth + 1;
+    });
+    saveState(); renderWBS(); renderGantt(); renderTasks(); refreshWBSText();
+    toast('WBSテキストを反映しました', 'success');
+}
+async function exportWBSText() {
+    syncTextareasFromStructuredEditors(false);
+    const content = (document.getElementById('wbs-textarea')?.value || buildWBSText()).replace(/\n/g, '\r\n');
+    const filename = 'wbs_' + sanitizeFilename(getActiveFolderName()) + '_' + makeSafeTimestamp() + '.txt';
+    await exportTextFile(filename, content);
+}
+async function exportTextFile(filename, content) {
+    if (workFolderHandle) {
+        const ok = await writeToWorkFolderPath(`${OUTPUT_DIR}/${filename}`, content);
+        if (ok) { toast(`${OUTPUT_DIR}/${filename} に保存しました`, 'success'); return; }
+    }
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+    toast(`${filename} をダウンロードしました`, 'success');
 }
 
 // ========== WBS（タスク階層化） ==========
@@ -3383,15 +4620,15 @@ function renderWBS() {
     const tree = document.getElementById('wbs-tree');
     if (!tree) return;
     tree.innerHTML = '';
-    const roots = state.tasks.filter(t => !t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const roots = getWBSTasksForFolder().filter(t => !t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
     roots.forEach(t => renderWBSNode(t, 0, tree));
     if (roots.length === 0) {
-        tree.innerHTML = '<div style="color:var(--text-dim);text-align:center;margin-top:30px;padding:20px;">タスクがありません<br><br>「+ WBSタスク追加」または「タスク一覧」から追加してください</div>';
+        tree.innerHTML = '<div style="color:var(--text-dim);text-align:center;margin-top:30px;padding:20px;">タスクがありません<br><br>上のWBSテキスト入力欄に入力して「テキストから更新」を押してください</div>';
     }
 }
 function renderWBSNode(task, depth, parentEl) {
     const node = document.createElement('div');
-    const children = state.tasks.filter(t => t.parentId === task.id);
+    const children = getWBSTasksForFolder(task.folderId || getActiveFolderId()).filter(t => t.parentId === task.id);
     const isParent = children.length > 0;
     const isSelected = state.selectedTaskId === task.id;
     node.className = 'wbs-node' + (isParent ? ' parent' : '') + (isSelected ? ' selected' : '');
@@ -3433,8 +4670,8 @@ function renderWBSNode(task, depth, parentEl) {
         // 連続入力：新規ノードを追加して編集モードへ
         const addNextNode = (parentId) => {
             const newTask = {
-                id: uid(), title: '', date: '', startDate: '', owner: '', status: '未着手',
-                memoId: null, wbsId: null, parentId: parentId, order: state.tasks.length
+                id: uid(), title: '', date: '', startDate: '', owner: '', status: '未着手', folderId: getActiveFolderId(),
+                memoId: null, wbsId: null, kind: 'wbs', parentId: parentId, order: state.tasks.length
             };
             state.tasks.push(newTask);
             editingNodeId = newTask.id;
@@ -3462,7 +4699,8 @@ function renderWBSNode(task, depth, parentEl) {
                 e.preventDefault();
                 const ok = commit(false);
                 if (ok) {
-                    addNextNode(task.id);
+                    if (getTaskDepth(task.id) >= MAX_WBS_LEVEL) { toast('WBSはL7までです', 'warning'); editingNodeId = null; }
+                    else addNextNode(task.id);
                 }
                 saveState(); renderWBS(); renderGantt();
                 if (editingNodeId) {
@@ -3599,6 +4837,8 @@ function renderWBSNode(task, depth, parentEl) {
         const dragged = state.tasks.find(t => t.id === draggedId);
         if (dragged) {
             if (isAncestor(draggedId, task.id)) { toast('循環参照になります', 'error'); return; }
+            if (!canAssignParent(draggedId, task.id)) { toast('WBSはL7までです', 'warning'); return; }
+            dragged.folderId = task.folderId || getActiveFolderId();
             dragged.parentId = task.id;
             saveState(); renderWBS(); renderGantt();
         }
@@ -3617,23 +4857,27 @@ function isAncestor(maybeAncestorId, descendantId) {
 function wbsIndent(taskId) {
     const t = state.tasks.find(x => x.id === taskId);
     if (!t) return;
-    const siblings = state.tasks.filter(x => x.parentId === t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const siblings = getWBSTasksForFolder(t.folderId || getActiveFolderId()).filter(x => x.parentId === t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
     const idx = siblings.findIndex(s => s.id === taskId);
     if (idx <= 0) { toast('インデントできません', 'warning'); return; }
-    t.parentId = siblings[idx - 1].id;
+    const newParentId = siblings[idx - 1].id;
+    if (!canAssignParent(taskId, newParentId)) { toast('WBSはL7までです', 'warning'); return; }
+    t.parentId = newParentId;
     saveState(); renderWBS(); renderGantt();
 }
 function wbsOutdent(taskId) {
     const t = state.tasks.find(x => x.id === taskId);
     if (!t || !t.parentId) { toast('これ以上アウトデントできません', 'warning'); return; }
     const parent = state.tasks.find(x => x.id === t.parentId);
-    t.parentId = parent ? parent.parentId : null;
+    const newParentId = parent ? parent.parentId : null;
+    if (!canAssignParent(taskId, newParentId)) { toast('WBSはL7までです', 'warning'); return; }
+    t.parentId = newParentId;
     saveState(); renderWBS(); renderGantt();
 }
 function wbsMove(taskId, dir) {
     const t = state.tasks.find(x => x.id === taskId);
     if (!t) return;
-    const siblings = state.tasks.filter(x => x.parentId === t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const siblings = getWBSTasksForFolder(t.folderId || getActiveFolderId()).filter(x => x.parentId === t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
     const idx = siblings.findIndex(s => s.id === taskId);
     const newIdx = idx + dir;
     if (newIdx < 0 || newIdx >= siblings.length) return;
@@ -3643,8 +4887,8 @@ function wbsMove(taskId, dir) {
 }
 function addWBSRoot() {
     const newTask = {
-        id: uid(), title: '', date: '', startDate: '', owner: '', status: '未着手',
-        memoId: null, wbsId: null, parentId: null, order: state.tasks.length
+        id: uid(), title: '', date: '', startDate: '', owner: '', status: '未着手', folderId: getActiveFolderId(),
+        priority: '', relatedWbs: '', relatedMemo: '', memoId: null, wbsId: null, kind: 'wbs', parentId: null, order: state.tasks.length
     };
     state.tasks.push(newTask);
     state.selectedTaskId = newTask.id;
@@ -3656,9 +4900,11 @@ function addWBSRoot() {
     }, 30);
 }
 function addWBSChild(parentId) {
+    const parentDepth = getTaskDepth(parentId);
+    if (parentDepth >= MAX_WBS_LEVEL) { toast('WBSはL7までです', 'warning'); return; }
     const newTask = {
-        id: uid(), title: '', date: '', startDate: '', owner: '', status: '未着手',
-        memoId: null, wbsId: null, parentId, order: state.tasks.length
+        id: uid(), title: '', date: '', startDate: '', owner: '', status: '未着手', folderId: getActiveFolderId(),
+        memoId: null, wbsId: null, kind: 'wbs', parentId, order: state.tasks.length
     };
     state.tasks.push(newTask);
     state.selectedTaskId = newTask.id;
@@ -3694,6 +4940,7 @@ function saveWBSFromPopup() {
     if (newParentId && (newParentId === t.id || isAncestor(t.id, newParentId))) {
         toast('循環参照になるため設定できません', 'error'); return;
     }
+    if (!canAssignParent(t.id, newParentId)) { toast('WBSはL7までです', 'warning'); return; }
     t.title = document.getElementById('wbs-pop-title').value;
     t.parentId = newParentId;
     t.startDate = document.getElementById('wbs-pop-start').value;
@@ -3740,7 +4987,7 @@ function renderGantt() {
     // 親タスクの期間を子から自動算出
     flat.forEach(item => {
         const t = item.task;
-        const children = state.tasks.filter(x => x.parentId === t.id);
+        const children = getWBSTasksForFolder(t.folderId || getActiveFolderId()).filter(x => x.parentId === t.id);
         if (children.length > 0) {
             const allDates = collectAllDates(t.id);
             if (allDates.starts.length) item._derivedStart = allDates.starts.sort()[0];
@@ -3881,7 +5128,7 @@ function collectAllDates(taskId) {
     const result = { starts: [], ends: [] };
     const t = state.tasks.find(x => x.id === taskId);
     if (!t) return result;
-    const children = state.tasks.filter(x => x.parentId === taskId);
+    const children = getWBSTasksForFolder(t.folderId || getActiveFolderId()).filter(x => x.parentId === taskId);
     if (children.length === 0) {
         if (t.startDate) result.starts.push(t.startDate);
         else if (t.date) result.starts.push(t.date);
@@ -3895,11 +5142,11 @@ function collectAllDates(taskId) {
     }
     return result;
 }
-function flattenWBS() {
+function flattenWBS(tasks = getWBSTasksForFolder()) {
     const result = [];
-    const roots = state.tasks.filter(t => !t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const roots = tasks.filter(t => !t.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
     function recurse(task, depth) {
-        const children = state.tasks.filter(t => t.parentId === task.id);
+        const children = tasks.filter(t => t.parentId === task.id);
         result.push({ task, depth, isParent: children.length > 0 });
         children.sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(c => recurse(c, depth + 1));
     }
@@ -3917,7 +5164,7 @@ function exportToPPTX() {
     if (flat.length === 0) { toast('出力するタスクがありません', 'warning'); return; }
     flat.forEach(it => {
         const t = it.task;
-        const children = state.tasks.filter(x => x.parentId === t.id);
+        const children = getTasksForFolder(t.folderId || getActiveFolderId()).filter(x => x.parentId === t.id);
         if (children.length > 0) {
             const ad = collectAllDates(t.id);
             it._derivedStart = ad.starts.sort()[0];
@@ -4041,6 +5288,8 @@ function openSettings() {
     document.getElementById('setting-memo-suffix').value = state.settings.memoSuffixTemplate || DEFAULT_MEMO_SUFFIX_TEMPLATE;
     document.getElementById('setting-date-format').value = state.settings.dateFormat || DEFAULT_DATE_FORMAT;
     document.getElementById('setting-datetime-format').value = state.settings.dateTimeFormat || DEFAULT_DATETIME_FORMAT;
+    document.getElementById('shortcut-clear-highlight').value = state.settings.shortcuts?.clearHighlight || 'Ctrl+Shift+H';
+    document.getElementById('shortcut-export-memo').value = state.settings.shortcuts?.exportMemo || 'Ctrl+E';
     // マイク選択肢の初期化（権限なしでも保存済みdeviceIdを表示）
     const micSel = document.getElementById('setting-mic-device');
     if (micSel) {
@@ -4082,6 +5331,10 @@ function saveSettings() {
     state.settings.dateFormat = document.getElementById('setting-date-format').value.trim() || DEFAULT_DATE_FORMAT;
     state.settings.dateTimeFormat = document.getElementById('setting-datetime-format').value.trim() || DEFAULT_DATETIME_FORMAT;
     state.settings.micDeviceId = document.getElementById('setting-mic-device')?.value || '';
+    state.settings.shortcuts = {
+        clearHighlight: document.getElementById('shortcut-clear-highlight')?.value || 'Ctrl+Shift+H',
+        exportMemo: document.getElementById('shortcut-export-memo')?.value || 'Ctrl+E'
+    };
     applyEditorSettings();
     saveState();
     document.getElementById('settings-popup').classList.remove('active');
@@ -4099,7 +5352,8 @@ async function exportAllData() {
         settings: state.settings,
     }, null, 2);
     if (workFolderHandle) {
-        const ok = await writeToWorkFolder('cockpit_data.json', data);
+        const filename = `${BACKUP_DIR}/cockpit_backup_${makeSafeTimestamp()}.json`;
+        const ok = await writeToWorkFolderPath(filename, data);
         if (ok) { toast('ワークフォルダにバックアップしました', 'success'); return; }
     }
     const blob = new Blob([data], { type: 'application/json' });
@@ -4140,12 +5394,14 @@ function resetAllData() {
 // ========== 全体描画 ==========
 function renderAll() {
     applyEditorSettings();
+    purgeTrash(false);
     renderFolderTree(); renderMemoList(); renderTagFilter(); renderRecordings();
     updateWorkFolderUI();
     if (state.memos.length > 0 && state.selectedMemoId) {
         const m = state.memos.find(x => x.id === state.selectedMemoId);
         if (m) loadMemoIntoEditor(m);
     }
+    refreshTodoText(); refreshWBSText();
 }
 
 // ========== 起動 ==========
@@ -4181,6 +5437,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
             e.preventDefault();
             manualSave();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'h' || e.key === 'H')) {
+            e.preventDefault();
+            clearHighlight();
+        }
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'e' || e.key === 'E')) {
+            e.preventDefault();
+            exportCurrentMemo();
         }
     });
 
