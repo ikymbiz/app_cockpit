@@ -635,8 +635,28 @@ html, body {
 .wbs-node .toggle {
     width: 14px; cursor: pointer; color: var(--text-dim); font-size: 10px;
 }
-.wbs-node .title { flex: 1; font-size: 12px; overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
+.wbs-node .title { flex: 1; min-width: 60px; font-size: 12px; overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; cursor: text; }
 .wbs-node .meta-info { font-size: 10px; color: var(--text-dim); margin-right: 6px; white-space: nowrap; }
+
+/* 行内編集（開始日・終了日・担当者・ステータス） */
+.wbs-inline-date, .wbs-inline-owner, .wbs-inline-status {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    font-family: inherit; box-sizing: border-box; flex-shrink: 0;
+    padding: 2px 4px; border-radius: 2px;
+}
+.wbs-inline-date { width: 118px; font-size: 10px; }
+.wbs-inline-owner { width: 70px; font-size: 11px; }
+.wbs-inline-status { width: 78px; font-size: 11px; cursor: pointer; }
+.wbs-inline-date:focus, .wbs-inline-owner:focus, .wbs-inline-status:focus {
+    border-color: var(--accent); outline: none;
+}
+.wbs-inline-date:disabled { color: var(--text-dim); background: var(--panel-2); cursor: not-allowed; }
+.wbs-inline-status[data-status="未着手"] { background: var(--panel-2); }
+.wbs-inline-status[data-status="進行中"] { background: rgba(74,158,255,0.22); border-color: var(--accent); color: var(--text); }
+.wbs-inline-status[data-status="完了"] { background: rgba(76,175,80,0.25); border-color: #4caf50; color: var(--text); }
+.wbs-inline-status[data-status="保留"] { background: rgba(255,152,0,0.22); border-color: #ff9800; color: var(--text); }
+.wbs-tree-wrap { overflow-x: auto; }
+.wbs-node { min-width: 0; }
 .wbs-node .controls { display: none; gap: 3px; }
 .wbs-node:hover .controls { display: flex; }
 .wbs-node .controls button {
@@ -1226,7 +1246,14 @@ textarea.structured-cell {
     </div>
     <div class="wbsgantt-content">
         <div class="wbs-pane" id="wbs-pane">
-            <div class="wbs-tree-header">タスク（WBS）</div>
+            <div class="wbs-tree-header" style="display:flex;align-items:center;gap:6px;padding:0 8px 0 14px;">
+                <span style="flex:1;">タスク</span>
+                <span style="width:118px;text-align:center;">開始日</span>
+                <span style="width:118px;text-align:center;">終了日</span>
+                <span style="width:70px;text-align:center;">担当</span>
+                <span style="width:78px;text-align:center;">状況</span>
+                <span style="width:8px;"></span>
+            </div>
             <div class="wbs-tree-wrap" id="wbs-tree"></div>
         </div>
         <div class="splitter" id="splitter"></div>
@@ -4750,22 +4777,81 @@ function renderWBSNode(task, depth, parentEl) {
     title.className = 'title';
     title.textContent = task.title || '(無題)';
 
-    // 期間情報
-    const meta = document.createElement('span');
-    meta.className = 'meta-info';
-    let metaText = '';
+    // 行内編集：開始日
+    const startInput = document.createElement('input');
+    startInput.type = 'date';
+    startInput.className = 'wbs-inline-date';
+    startInput.title = isParent ? '開始日（子タスクの最早日：自動）' : '開始日';
     if (isParent) {
         const ad = collectAllDates(task.id);
-        const s = ad.starts.sort()[0];
-        const e = ad.ends.sort().pop();
-        if (s || e) metaText = `${s || '?'}〜${e || '?'}`;
+        startInput.value = ad.starts.sort()[0] || '';
+        startInput.disabled = true;
     } else {
-        if (task.startDate || task.date) {
-            metaText = `${task.startDate || '?'}〜${task.date || '?'}`;
-        }
+        startInput.value = task.startDate || '';
     }
-    if (task.owner) metaText += ' @' + task.owner;
-    meta.textContent = metaText;
+    startInput.onclick = (e) => e.stopPropagation();
+    startInput.onmousedown = (e) => e.stopPropagation();
+    startInput.onchange = (e) => {
+        e.stopPropagation();
+        task.startDate = startInput.value;
+        saveState(); renderWBS(); renderGantt();
+    };
+
+    // 行内編集：終了日（期日）
+    const endInput = document.createElement('input');
+    endInput.type = 'date';
+    endInput.className = 'wbs-inline-date';
+    endInput.title = isParent ? '終了日（子タスクの最遅日：自動）' : '終了日（期日）';
+    if (isParent) {
+        const ad = collectAllDates(task.id);
+        endInput.value = ad.ends.sort().pop() || '';
+        endInput.disabled = true;
+    } else {
+        endInput.value = task.date || '';
+    }
+    endInput.onclick = (e) => e.stopPropagation();
+    endInput.onmousedown = (e) => e.stopPropagation();
+    endInput.onchange = (e) => {
+        e.stopPropagation();
+        task.date = endInput.value;
+        saveState(); renderWBS(); renderGantt();
+    };
+
+    // 行内編集：担当者
+    const ownerInput = document.createElement('input');
+    ownerInput.type = 'text';
+    ownerInput.className = 'wbs-inline-owner';
+    ownerInput.placeholder = '担当';
+    ownerInput.value = task.owner || '';
+    ownerInput.title = '担当者';
+    ownerInput.onclick = (e) => e.stopPropagation();
+    ownerInput.onmousedown = (e) => e.stopPropagation();
+    ownerInput.oninput = (e) => { task.owner = ownerInput.value; };
+    ownerInput.onchange = (e) => { e.stopPropagation(); task.owner = ownerInput.value; saveState(); };
+    ownerInput.onkeydown = (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); ownerInput.blur(); }
+    };
+
+    // 行内編集：ステータス
+    const statusSelect = document.createElement('select');
+    statusSelect.className = 'wbs-inline-status';
+    const currentStatus = task.status || '未着手';
+    statusSelect.dataset.status = currentStatus;
+    ['未着手','進行中','完了','保留'].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        if (currentStatus === s) opt.selected = true;
+        statusSelect.appendChild(opt);
+    });
+    statusSelect.onclick = (e) => e.stopPropagation();
+    statusSelect.onmousedown = (e) => e.stopPropagation();
+    statusSelect.onchange = (e) => {
+        e.stopPropagation();
+        task.status = statusSelect.value;
+        statusSelect.dataset.status = task.status;
+        saveState(); renderWBS(); renderGantt();
+    };
 
     const controls = document.createElement('div');
     controls.className = 'controls';
@@ -4791,7 +4877,7 @@ function renderWBSNode(task, depth, parentEl) {
     addChildBtn.onclick = (e) => { e.stopPropagation(); addWBSChild(task.id); };
 
     const editBtn = document.createElement('button');
-    editBtn.textContent = '✏'; editBtn.title = '詳細編集（日付/担当）';
+    editBtn.textContent = '✏'; editBtn.title = '詳細編集（ポップアップ）';
     editBtn.onclick = (e) => { e.stopPropagation(); openWBSPopup(task.id); };
 
     const delBtn = document.createElement('button');
@@ -4801,7 +4887,7 @@ function renderWBSNode(task, depth, parentEl) {
 
     controls.append(indentBtn, outdentBtn, upBtn, downBtn, addChildBtn, editBtn, delBtn);
 
-    node.append(toggle, title, meta, controls);
+    node.append(toggle, title, startInput, endInput, ownerInput, statusSelect, controls);
     node.onclick = () => {
         state.selectedTaskId = task.id;
         renderWBS(); renderGantt();
